@@ -1,3 +1,5 @@
+use fixedbitset::FixedBitSet;
+
 use crate::SparseArray;
 
 /// An index into a [`World`](super::world).
@@ -81,6 +83,45 @@ impl Entities {
             true
         } else {
             false
+        }
+    }
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct EntityIdSet {
+    entities: FixedBitSet,
+}
+
+impl EntityIdSet {
+    #[inline]
+    pub fn insert(&mut self, index: usize) {
+        self.entities.grow(index + 1);
+        self.entities.insert(index);
+    }
+
+    #[inline]
+    pub fn remove(&mut self, index: usize) -> bool {
+        let has = self.entities.contains(index);
+        self.entities.set(index, false);
+        has
+    }
+
+    #[inline]
+    pub fn contains(&self, index: usize) -> bool {
+        self.entities.contains(index)
+    }
+
+    #[inline]
+    pub fn iter(&self) -> impl Iterator<Item = usize> + '_ {
+        self.entities.ones()
+    }
+}
+
+impl FromIterator<usize> for EntityIdSet {
+    #[inline]
+    fn from_iter<I: IntoIterator<Item = usize>>(iter: I) -> Self {
+        Self {
+            entities: iter.into_iter().collect(),
         }
     }
 }

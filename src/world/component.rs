@@ -97,10 +97,96 @@ impl ComponentId {
     }
 }
 
+impl Into<usize> for ComponentId {
+    #[inline]
+    fn into(self) -> usize {
+        self.0
+    }
+}
+
+impl From<usize> for ComponentId {
+    #[inline]
+    fn from(index: usize) -> ComponentId {
+        ComponentId(index)
+    }
+}
+
+#[derive(Clone, Default)]
 pub struct Components {
     components: Vec<ComponentInfo>,
     indices: HashMap<TypeId, usize>,
     resource_indices: HashMap<TypeId, usize>,
 }
 
-impl Components {}
+impl Components {
+    #[inline]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    #[inline]
+    pub fn init_component<T: Component>(&mut self) -> ComponentId {
+        let type_id = TypeId::of::<T>();
+
+        if let Some(index) = self.indices.get(&type_id) {
+            return ComponentId::new(*index);
+        }
+
+        let index = self.components.len();
+        self.components.push(ComponentInfo::new(
+            ComponentId::new(index),
+            ComponentDescriptor::new::<T>(),
+        ));
+        self.indices.insert(type_id, index);
+
+        ComponentId::new(index)
+    }
+
+    #[inline]
+    pub fn init_resource<T: Component>(&mut self) -> ComponentId {
+        let type_id = TypeId::of::<T>();
+
+        if let Some(index) = self.resource_indices.get(&type_id) {
+            return ComponentId::new(*index);
+        }
+
+        let index = self.components.len();
+        self.components.push(ComponentInfo::new(
+            ComponentId::new(index),
+            ComponentDescriptor::new::<T>(),
+        ));
+        self.resource_indices.insert(type_id, index);
+
+        ComponentId::new(index)
+    }
+
+    #[inline]
+    pub fn contains_component<T: Component>(&self) -> bool {
+        self.indices.contains_key(&TypeId::of::<T>())
+    }
+
+    #[inline]
+    pub fn contains_resource<T: Component>(&self) -> bool {
+        self.resource_indices.contains_key(&TypeId::of::<T>())
+    }
+
+    #[inline]
+    pub fn get(&self, id: ComponentId) -> &ComponentInfo {
+        &self.components[id.index()]
+    }
+
+    #[inline]
+    pub unsafe fn get_unchecked(&self, id: ComponentId) -> &ComponentInfo {
+        unsafe { self.components.get_unchecked(id.index()) }
+    }
+
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.components.len()
+    }
+
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.components.is_empty()
+    }
+}

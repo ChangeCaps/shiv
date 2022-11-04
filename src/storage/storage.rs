@@ -1,19 +1,19 @@
-use std::{
-    any::TypeId,
-    mem::{self, MaybeUninit},
+use std::cell::UnsafeCell;
+
+use crate::{
+    ChangeTicks, ComponentDescriptor, ComponentId, ComponentInfo, Entity, EntityIdSet, SparseArray,
+    SparseStorage,
 };
 
-use crate::{hash_map::HashMap, Component, ComponentDescriptor, Entity, SparseStorage};
-
 pub struct StorageSets<T> {
-    types: HashMap<TypeId, T>,
+    storage_sets: SparseArray<T>,
 }
 
 impl<T> Default for StorageSets<T> {
     #[inline]
     fn default() -> Self {
         Self {
-            types: HashMap::default(),
+            storage_sets: SparseArray::new(),
         }
     }
 }
@@ -23,77 +23,43 @@ where
     T: StorageSet,
 {
     #[inline]
-    pub fn get<U: Component>(&self) -> Option<&T> {
-        self.types.get(&TypeId::of::<U>())
+    pub fn get(&self, id: ComponentId) -> Option<&T> {
+        self.storage_sets.get(id.index())
     }
 
     #[inline]
-    pub fn get_mut<U: Component>(&mut self) -> Option<&mut T> {
-        self.types.get_mut(&TypeId::of::<U>())
+    pub fn get_mut(&mut self, id: ComponentId) -> Option<&mut T> {
+        self.storage_sets.get_mut(id.index())
     }
 
     #[inline]
-    pub fn get_or_insert<U: Component>(&mut self) -> &mut T {
-        self.types
-            .entry(TypeId::of::<U>())
-            .or_insert_with(|| T::new(ComponentDescriptor::new::<U>(), 0))
+    pub unsafe fn get_unchecked(&self, id: ComponentId) -> &T {
+        unsafe { self.storage_sets.get_unchecked(id.index()) }
     }
 
     #[inline]
-    pub fn get_raw_ptr<U: Component>(&self, entity: Entity) -> Option<*mut U> {
-        self.get::<U>()?.get(entity).map(|x| x as *mut U)
+    pub unsafe fn get_unchecked_mut(&mut self, id: ComponentId) -> &mut T {
+        unsafe { self.storage_sets.get_unchecked_mut(id.index()) }
     }
 
     #[inline]
-    pub fn get_component<U: Component>(&self, entity: Entity) -> Option<&U> {
-        self.get_raw_ptr::<U>(entity).map(|x| unsafe { &*x })
-    }
-
-    #[inline]
-    pub fn get_component_mut<U: Component>(&mut self, entity: Entity) -> Option<&mut U> {
-        self.get_raw_ptr::<U>(entity).map(|x| unsafe { &mut *x })
-    }
-
-    #[inline]
-    pub fn insert_component<U: Component>(
-        &mut self,
-        entity: Entity,
-        mut component: U,
-        change_tick: u32,
-    ) {
-        let ptr = &mut component as *mut U;
-        unsafe {
-            self.get_or_insert::<U>()
-                .insert(entity, ptr as *mut u8, change_tick)
-        };
-        mem::forget(component);
-    }
-
-    #[inline]
-    pub fn remove_component<U: Component>(&mut self, entity: Entity) -> Option<U> {
-        let storage = self.get_mut::<U>()?;
-
-        if !storage.contains(entity) {
-            return None;
+    pub fn initialize(&mut self, info: &ComponentInfo) {
+        if !self.storage_sets.contains(info.id().index()) {
+            let set = StorageSet::new(*info.descriptor(), info.id().index());
+            self.storage_sets.insert(info.id().index(), set);
         }
-
-        let mut component = MaybeUninit::<U>::uninit();
-
-        unsafe { storage.remove_unchecked(entity, component.as_mut_ptr() as *mut u8) };
-
-        Some(unsafe { component.assume_init() })
     }
 
     #[inline]
-    pub fn remove_and_drop<U: Component>(&mut self, entity: Entity) {
-        if let Some(storage) = self.get_mut::<U>() {
+    pub fn remove_and_drop(&mut self, entity: Entity, id: ComponentId) {
+        if let Some(storage) = self.get_mut(id) {
             storage.remove_and_drop(entity);
         }
     }
 
     #[inline]
     pub fn remove(&mut self, entity: Entity) {
-        for storage in self.types.values_mut() {
+        for (_, storage) in self.storage_sets.iter_mut() {
             storage.remove_and_drop(entity);
         }
     }
@@ -119,31 +85,6 @@ impl ComponentStorage {
     pub fn remove(&mut self, entity: Entity) {
         self.sparse.remove(entity);
     }
-
-    #[inline]
-    pub fn insert<U: Component>(&mut self, entity: Entity, component: U, change_tick: u32) {
-        self.sparse.insert_component(entity, component, change_tick);
-    }
-
-    #[inline]
-    pub fn remove_component<U: Component>(&mut self, entity: Entity) -> Option<U> {
-        self.sparse.remove_component(entity)
-    }
-
-    #[inline]
-    pub fn get<T: Component>(&self, entity: Entity) -> Option<&T> {
-        self.sparse.get_component(entity)
-    }
-
-    #[inline]
-    pub fn get_mut<T: Component>(&mut self, entity: Entity) -> Option<&mut T> {
-        self.sparse.get_component_mut(entity)
-    }
-
-    #[inline]
-    pub fn get_raw_ptr<T: Component>(&self, entity: Entity) -> Option<*mut u8> {
-        self.sparse.get::<T>()?.get(entity)
-    }
 }
 
 pub trait StorageSet: Send + Sync + 'static {
@@ -152,6 +93,8 @@ pub trait StorageSet: Send + Sync + 'static {
 
     /// Returns `true` if the storage contains a component for the given entity.
     fn contains(&self, entity: Entity) -> bool;
+
+    fn entities(&self) -> EntityIdSet;
 
     /// Inserts a component for the given entity.
     ///
@@ -184,4 +127,13 @@ pub trait StorageSet: Send + Sync + 'static {
             None
         }
     }
+
+    /// Returns a pointer to the component for the given entity and it's change ticks.
+    ///
+    /// # Safety
+    /// - `entity` must be contained in the storage.
+    unsafe fn get_with_ticks_unchecked(
+        &self,
+        entity: Entity,
+    ) -> (*mut u8, &UnsafeCell<ChangeTicks>);
 }

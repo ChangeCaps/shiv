@@ -12,9 +12,6 @@ pub struct BlobVec {
     data: NonNull<u8>,
 }
 
-unsafe impl Sync for BlobVec {}
-unsafe impl Send for BlobVec {}
-
 impl BlobVec {
     #[inline]
     pub fn new(item_layout: Layout, drop: Option<unsafe fn(*mut u8)>, capacity: usize) -> BlobVec {

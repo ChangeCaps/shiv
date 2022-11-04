@@ -1,4 +1,4 @@
-use crate::{Access, Component, ComponentId, Entity, Storage, StorageSet, World};
+use crate::{Access, Component, ComponentId, Entity, Mut, Storage, StorageSet, Ticks, World};
 
 pub unsafe trait WorldQuery {
     type Item<'w>;
@@ -6,7 +6,12 @@ pub unsafe trait WorldQuery {
     type State: Send + Sync + Sized;
     type ReadOnly: ReadOnlyWorldQuery<State = Self::State>;
 
-    unsafe fn init_fetch<'w>(world: &'w World, state: &Self::State) -> Self::Fetch<'w>;
+    unsafe fn init_fetch<'w>(
+        world: &'w World,
+        state: &Self::State,
+        last_change_tick: u32,
+        change_tick: u32,
+    ) -> Self::Fetch<'w>;
     unsafe fn fetch<'w>(fetch: &mut Self::Fetch<'w>, entity: Entity) -> Self::Item<'w>;
     unsafe fn filter_fetch<'w>(_fetch: &mut Self::Fetch<'w>, _entity: Entity) -> bool {
         true
@@ -29,7 +34,13 @@ unsafe impl WorldQuery for Entity {
     type State = ();
     type ReadOnly = Self;
 
-    unsafe fn init_fetch<'w>(_world: &'w World, _state: &Self::State) -> Self::Fetch<'w> {}
+    unsafe fn init_fetch<'w>(
+        _world: &'w World,
+        _state: &Self::State,
+        _last_change_tick: u32,
+        _change_tick: u32,
+    ) -> Self::Fetch<'w> {
+    }
 
     unsafe fn fetch<'w>(_fetch: &mut Self::Fetch<'w>, entity: Entity) -> Self::Item<'w> {
         entity
@@ -48,14 +59,19 @@ pub struct ReadFetch<'w, T: Component> {
 unsafe impl<T: Component> WorldQuery for &T {
     type Item<'w> = &'w T;
     type Fetch<'w> = ReadFetch<'w, T>;
-    type State = ();
+    type State = ComponentId;
     type ReadOnly = Self;
 
-    unsafe fn init_fetch<'w>(world: &'w World, _state: &Self::State) -> Self::Fetch<'w> {
+    unsafe fn init_fetch<'w>(
+        world: &'w World,
+        &state: &Self::State,
+        _last_change_tick: u32,
+        _change_tick: u32,
+    ) -> Self::Fetch<'w> {
         let storage_sets = <T::Storage as Storage>::get(&world.storage);
 
         ReadFetch {
-            storage: storage_sets.get::<T>().unwrap(),
+            storage: storage_sets.get(state).unwrap(),
         }
     }
 
@@ -68,56 +84,81 @@ unsafe impl<T: Component> WorldQuery for &T {
     }
 
     fn init_state(world: &mut World) -> Self::State {
-        world.init_component::<T>();
+        world.init_component::<T>()
     }
 
-    fn update_component_access(_state: &Self::State, _access: &mut Access<ComponentId>) {}
+    fn update_component_access(&state: &Self::State, access: &mut Access<ComponentId>) {
+        access.add_read(state);
+    }
 }
 
 unsafe impl<T: Component> ReadOnlyWorldQuery for &T {}
 
 pub struct WriteFetch<'w, T: Component> {
     storage: &'w T::Storage,
+    last_change_tick: u32,
+    change_tick: u32,
 }
 
 unsafe impl<'a, T: Component> WorldQuery for &'a mut T {
-    type Item<'w> = &'w mut T;
+    type Item<'w> = Mut<'w, T>;
     type Fetch<'w> = WriteFetch<'w, T>;
-    type State = ();
+    type State = ComponentId;
     type ReadOnly = &'a T;
 
-    unsafe fn init_fetch<'w>(world: &'w World, _state: &Self::State) -> Self::Fetch<'w> {
+    unsafe fn init_fetch<'w>(
+        world: &'w World,
+        &state: &Self::State,
+        last_change_tick: u32,
+        change_tick: u32,
+    ) -> Self::Fetch<'w> {
         let storage_sets = <T::Storage as Storage>::get(&world.storage);
 
         WriteFetch {
-            storage: storage_sets.get::<T>().unwrap(),
+            storage: storage_sets.get(state).unwrap(),
+            last_change_tick,
+            change_tick,
         }
     }
 
     unsafe fn fetch<'w>(fetch: &mut Self::Fetch<'w>, entity: Entity) -> Self::Item<'w> {
-        unsafe { &mut *(fetch.storage.get_unchecked(entity) as *mut T) }
+        let (value, ticks) = unsafe { fetch.storage.get_with_ticks_unchecked(entity) };
+
+        Mut {
+            value: unsafe { &mut *(value as *mut T) },
+            ticks: Ticks {
+                ticks: unsafe { &mut *ticks.get() },
+                last_change_tick: fetch.last_change_tick,
+                change_tick: fetch.change_tick,
+            },
+        }
     }
 
     fn init_state(world: &mut World) -> Self::State {
-        world.init_component::<T>();
+        world.init_component::<T>()
     }
 
-    fn update_component_access(_state: &Self::State, access: &mut Access<ComponentId>) {
-        todo!()
+    fn update_component_access(&state: &Self::State, access: &mut Access<ComponentId>) {
+        access.add_write(state);
     }
 }
 
 macro_rules! impl_world_query {
     (@ $($ident:ident),*) => {
-        #[allow(non_snake_case)]
+        #[allow(non_snake_case, unused)]
         unsafe impl<$($ident: WorldQuery),*> WorldQuery for ($($ident,)*) {
             type Item<'w> = ($($ident::Item<'w>,)*);
             type Fetch<'w> = ($($ident::Fetch<'w>,)*);
             type State = ($($ident::State,)*);
             type ReadOnly = ($($ident::ReadOnly,)*);
 
-            unsafe fn init_fetch<'w>(world: &'w World, ($($ident,)*): &Self::State) -> Self::Fetch<'w> {
-                unsafe { ($($ident::init_fetch(world, $ident),)*) }
+            unsafe fn init_fetch<'w>(
+                world: &'w World,
+                ($($ident,)*): &Self::State,
+                last_change_tick: u32,
+                change_tick: u32,
+            ) -> Self::Fetch<'w> {
+                unsafe { ($($ident::init_fetch(world, $ident, last_change_tick, change_tick),)*) }
             }
 
             unsafe fn fetch<'w>(

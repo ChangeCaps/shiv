@@ -1,7 +1,81 @@
+use std::ops::{Deref, DerefMut};
+
 pub const CHECK_TICK_THRESHOLD: u32 = 518_400_000;
 
 pub const MAX_CHANGE_AGE: u32 = u32::MAX - (2 * CHECK_TICK_THRESHOLD - 1);
 
+pub struct Ticks<'w> {
+    pub(crate) ticks: &'w mut ChangeTicks,
+    pub(crate) last_change_tick: u32,
+    pub(crate) change_tick: u32,
+}
+
+impl<'w> Ticks<'w> {
+    #[inline]
+    pub fn set_changed(&mut self) {
+        self.ticks.set_changed(self.change_tick);
+    }
+
+    #[inline]
+    pub fn is_changed(&self) -> bool {
+        self.ticks
+            .is_changed(self.last_change_tick, self.change_tick)
+    }
+
+    #[inline]
+    pub fn is_added(&self) -> bool {
+        self.ticks.is_added(self.last_change_tick, self.change_tick)
+    }
+}
+
+pub struct Mut<'w, T> {
+    pub(crate) value: &'w mut T,
+    pub(crate) ticks: Ticks<'w>,
+}
+
+impl<'w, T> Mut<'w, T> {
+    /// Sets the value but only marks is as changed if `self.value != value`.
+    #[inline]
+    pub fn set(&mut self, value: T)
+    where
+        T: PartialEq,
+    {
+        if *self.value != value {
+            self.ticks.set_changed();
+        }
+
+        *self.value = value;
+    }
+
+    #[inline]
+    pub fn get(&self) -> &T {
+        self.value
+    }
+
+    #[inline]
+    pub fn get_mut(&mut self) -> &mut T {
+        self.ticks.set_changed();
+        self.value
+    }
+}
+
+impl<'w, T> Deref for Mut<'w, T> {
+    type Target = T;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        self.value
+    }
+}
+
+impl<'w, T> DerefMut for Mut<'w, T> {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.value
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
 pub struct ChangeTicks {
     added: u32,
     changed: u32,

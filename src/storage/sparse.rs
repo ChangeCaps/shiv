@@ -1,4 +1,6 @@
-use crate::{ChangeTicks, Column, ComponentDescriptor, Entity, StorageSet};
+use std::cell::UnsafeCell;
+
+use crate::{ChangeTicks, Column, ComponentDescriptor, Entity, EntityIdSet, StorageSet};
 
 #[repr(transparent)]
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -39,6 +41,16 @@ impl<T> SparseArray<T> {
     }
 
     #[inline]
+    pub unsafe fn get_unchecked_mut(&mut self, index: usize) -> &mut T {
+        unsafe {
+            self.data
+                .get_unchecked_mut(index)
+                .as_mut()
+                .unwrap_unchecked()
+        }
+    }
+
+    #[inline]
     pub fn insert(&mut self, index: usize, value: T) {
         if index >= self.data.len() {
             self.data.resize_with(index + 1, Default::default);
@@ -63,6 +75,14 @@ impl<T> SparseArray<T> {
             .iter()
             .enumerate()
             .filter_map(|(index, value)| value.as_ref().map(|value| (index, value)))
+    }
+
+    #[inline]
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = (usize, &mut T)> {
+        self.data
+            .iter_mut()
+            .enumerate()
+            .filter_map(|(index, value)| value.as_mut().map(|value| (index, value)))
     }
 
     #[inline]
@@ -95,6 +115,11 @@ impl StorageSet for SparseStorage {
     #[inline]
     fn contains(&self, entity: Entity) -> bool {
         self.sparse.contains(entity.index() as usize)
+    }
+
+    #[inline]
+    fn entities(&self) -> EntityIdSet {
+        self.sparse.iter().map(|(id, _)| id).collect()
     }
 
     #[inline]
@@ -133,5 +158,18 @@ impl StorageSet for SparseStorage {
     fn get(&self, entity: Entity) -> Option<*mut u8> {
         let index = self.sparse.get(entity.index() as usize)?;
         self.dense.get_data(*index as usize)
+    }
+
+    #[inline]
+    unsafe fn get_with_ticks_unchecked(
+        &self,
+        entity: Entity,
+    ) -> (*mut u8, &UnsafeCell<ChangeTicks>) {
+        // SAFETY: `entity` is contained in self as per safety requirement.
+        let &index = unsafe { self.sparse.get_unchecked(entity.index() as usize) };
+        let data = unsafe { self.dense.get_data_unchecked(index as usize) };
+        let ticks = unsafe { self.dense.get_ticks_unchecked(index as usize) };
+
+        (data, ticks)
     }
 }

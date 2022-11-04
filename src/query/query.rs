@@ -1,4 +1,7 @@
-use crate::{Entity, QueryItem, ReadOnlyQueryItem, ReadOnlyWorldQuery, World, WorldId, WorldQuery};
+use crate::{
+    Entity, EntityIdSet, QueryItem, ReadOnlyQueryItem, ReadOnlyWorldQuery, World, WorldId,
+    WorldQuery,
+};
 
 pub struct QueryState<Q: WorldQuery, F: ReadOnlyWorldQuery> {
     world_id: WorldId,
@@ -14,6 +17,13 @@ impl<Q: WorldQuery, F: ReadOnlyWorldQuery> QueryState<Q, F> {
             fetch_state: Q::init_state(world),
             filter_state: F::init_state(world),
         }
+    }
+
+    #[inline]
+    pub fn get_entities(&self, world: &World) -> EntityIdSet {
+        self.debug_validate_world(world);
+
+        todo!()
     }
 
     #[inline]
@@ -40,9 +50,13 @@ impl<Q: WorldQuery, F: ReadOnlyWorldQuery> QueryState<Q, F> {
         &self,
         world: &'w World,
         entity: Entity,
+        last_change_tick: u32,
+        change_tick: u32,
     ) -> Option<Q::Item<'w>> {
-        let mut fetch = unsafe { Q::init_fetch(world, &self.fetch_state) };
-        let mut filter = unsafe { F::init_fetch(world, &self.filter_state) };
+        let mut fetch =
+            unsafe { Q::init_fetch(world, &self.fetch_state, last_change_tick, change_tick) };
+        let mut filter =
+            unsafe { F::init_fetch(world, &self.filter_state, last_change_tick, change_tick) };
 
         if unsafe { F::filter_fetch(&mut filter, entity) } {
             Some(unsafe { Q::fetch(&mut fetch, entity) })
@@ -61,18 +75,28 @@ impl<Q: WorldQuery, F: ReadOnlyWorldQuery> QueryState<Q, F> {
     }
 
     #[inline]
+    pub fn debug_validate_world(&self, world: &World) {
+        #[cfg(debug_assertions)]
+        self.validate_world(world);
+    }
+
+    #[inline]
     pub fn get<'w>(&self, world: &'w World, entity: Entity) -> Option<ReadOnlyQueryItem<'w, Q>> {
         self.validate_world(world);
 
         let state = self.as_readonly();
-        unsafe { state.get_unchecked_manual(world, entity) }
+        unsafe {
+            state.get_unchecked_manual(world, entity, world.last_change_tick(), world.change_tick())
+        }
     }
 
     #[inline]
     pub fn get_mut<'w>(&self, world: &'w mut World, entity: Entity) -> Option<QueryItem<'w, Q>> {
         self.validate_world(world);
 
-        unsafe { self.get_unchecked_manual(world, entity) }
+        unsafe {
+            self.get_unchecked_manual(world, entity, world.last_change_tick(), world.change_tick())
+        }
     }
 }
 
@@ -104,11 +128,20 @@ impl<'w, 's, Q: WorldQuery, F: ReadOnlyWorldQuery> Query<'w, 's, Q, F> {
     #[inline]
     pub fn get(&self, entity: Entity) -> Option<ReadOnlyQueryItem<'_, Q>> {
         let state = self.state.as_readonly();
-        unsafe { state.get_unchecked_manual(self.world, entity) }
+        unsafe {
+            state.get_unchecked_manual(self.world, entity, self.last_change_tick, self.change_tick)
+        }
     }
 
     #[inline]
     pub fn get_mut(&mut self, entity: Entity) -> Option<QueryItem<'_, Q>> {
-        unsafe { self.state.get_unchecked_manual(self.world, entity) }
+        unsafe {
+            self.state.get_unchecked_manual(
+                self.world,
+                entity,
+                self.last_change_tick,
+                self.change_tick,
+            )
+        }
     }
 }
