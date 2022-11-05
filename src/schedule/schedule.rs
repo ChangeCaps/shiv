@@ -2,16 +2,45 @@ use crate::{
     hash_map::HashMap, IntoSystemDescriptor, Stage, StageLabel, StageLabelId, SystemStage, World,
 };
 
-#[derive(Debug, Default)]
+use crate as termite;
+
+#[derive(StageLabel)]
+pub enum CoreStage {
+    First,
+    Last,
+}
+
+#[derive(Debug)]
 pub struct Schedule {
     stages: HashMap<StageLabelId, Box<dyn Stage>>,
     stage_order: Vec<StageLabelId>,
 }
 
+impl Default for Schedule {
+    #[inline]
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Schedule {
     #[inline]
+    pub fn empty() -> Self {
+        Self {
+            stages: HashMap::default(),
+            stage_order: Vec::new(),
+        }
+    }
+
+    /// Creates a new schedule [`CoreStage`]s.
+    #[inline]
     pub fn new() -> Self {
-        Self::default()
+        let mut schedule = Self::empty();
+
+        schedule.add_stage(CoreStage::First, SystemStage::parallel());
+        schedule.add_stage(CoreStage::Last, SystemStage::parallel());
+
+        schedule
     }
 
     pub fn with_stage(mut self, label: impl StageLabel, stage: impl Stage) -> Self {
