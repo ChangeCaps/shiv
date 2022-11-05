@@ -8,6 +8,9 @@ use crate::{
     ReadOnlyWorldQuery, Resource, SystemMeta, World, WorldQuery,
 };
 
+pub unsafe trait ReadOnlySystemParamState {}
+pub unsafe trait ReadOnlySystemParamFetch: for<'w, 's> SystemParamFetch<'w, 's> {}
+
 pub trait SystemParam: Sized {
     type Fetch: for<'w, 's> SystemParamFetch<'w, 's>;
 }
@@ -54,6 +57,8 @@ impl<'w, 's> SystemParamFetch<'w, 's> for CommandQueue {
         Commands::new(self, world)
     }
 }
+
+unsafe impl ReadOnlySystemParamFetch for CommandQueue {}
 
 impl<'w, 's> SystemParam for Commands<'w, 's> {
     type Fetch = CommandQueue;
@@ -105,6 +110,20 @@ where
     F: ReadOnlyWorldQuery + 'static,
 {
     type Fetch = QueryState<Q, F>;
+}
+
+unsafe impl<Q, F> ReadOnlySystemParamState for QueryState<Q, F>
+where
+    Q: ReadOnlyWorldQuery + 'static,
+    F: ReadOnlyWorldQuery + 'static,
+{
+}
+
+unsafe impl<Q, F> ReadOnlySystemParamFetch for QueryState<Q, F>
+where
+    Q: ReadOnlyWorldQuery + 'static,
+    F: ReadOnlyWorldQuery + 'static,
+{
 }
 
 fn assert_access_compatibility(
@@ -225,6 +244,9 @@ impl<'w, 's, T: Resource> SystemParamFetch<'w, 's> for ResState<T> {
 impl<'w, T: Resource> SystemParam for Res<'w, T> {
     type Fetch = ResState<T>;
 }
+
+unsafe impl<T: Resource> ReadOnlySystemParamState for ResState<T> {}
+unsafe impl<T: Resource> ReadOnlySystemParamFetch for ResState<T> {}
 
 pub struct ResMut<'w, T> {
     value: &'w mut T,
