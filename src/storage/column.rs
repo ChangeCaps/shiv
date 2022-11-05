@@ -95,7 +95,6 @@ impl Column {
             None
         }
     }
-
     /// # Safety
     /// - `index` must be in bounds
     #[inline]
@@ -123,7 +122,7 @@ impl Column {
 
     #[inline]
     pub fn check_change_ticks(&mut self, change_tick: u32) {
-        for ticks in &mut self.ticks {
+        for ticks in self.ticks.iter_mut() {
             ticks.get_mut().check_ticks(change_tick);
         }
     }

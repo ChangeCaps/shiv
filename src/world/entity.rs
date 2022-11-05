@@ -1,14 +1,14 @@
+use std::sync::atomic::{AtomicIsize, Ordering};
+
 use fixedbitset::FixedBitSet;
 
-use crate::SparseArray;
-
-/// An index into a [`World`](super::world).
+/// An index into a [`World`](super::World).
 ///
 /// Contains an `index` and a `generation`.
 /// When an [`Entity`] is freed, the index is reused,
 /// but the generation is incremented.
 #[repr(C)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Entity {
     index: u32,
     generation: u32,
@@ -33,57 +33,15 @@ impl Entity {
     }
 }
 
-/// An allocator for [`Entity`]s.
-#[derive(Clone, Debug, Default)]
-pub struct Entities {
-    entities: EntitySet,
-    free: Vec<Entity>,
-    next: u32,
+impl std::fmt::Debug for Entity {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}v{}", self.index, self.generation)
+    }
 }
 
-impl Entities {
-    /// Creates a new [`EntityAllocator`].
-    #[inline]
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    #[inline]
-    pub fn contains(&self, entity: Entity) -> bool {
-        self.entities.contains(entity)
-    }
-
-    /// Allocates a new [`Entity`].
-    ///
-    /// If there are any free entities, their ids will be reused.
-    #[inline]
-    pub fn allocate(&mut self) -> Entity {
-        let entity = if let Some(mut entity) = self.free.pop() {
-            entity.generation += 1;
-            entity
-        } else {
-            let id = self.next;
-            self.next += 1;
-            Entity::from_raw_parts(id, 0)
-        };
-
-        self.entities.insert(entity);
-
-        entity
-    }
-
-    /// Frees an [`Entity`].
-    ///
-    /// The entity will be reused when allocating a new one.
-    #[inline]
-    pub fn free(&mut self, entity: Entity) -> bool {
-        if self.entities.remove(entity) {
-            self.free.push(entity);
-
-            true
-        } else {
-            false
-        }
+impl std::fmt::Display for Entity {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}v{}", self.index, self.generation)
     }
 }
 
@@ -93,6 +51,33 @@ pub struct EntityIdSet {
 }
 
 impl EntityIdSet {
+    #[inline]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.entities.len()
+    }
+
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.entities.is_empty()
+    }
+
+    #[inline]
+    pub fn resize(&mut self, len: usize, value: bool) {
+        let old_len = self.entities.len();
+        self.entities.grow(len);
+
+        if len > old_len {
+            self.entities.set_range(old_len.., value);
+        } else {
+            self.entities.set_range(len.., value);
+        }
+    }
+
     #[inline]
     pub fn insert(&mut self, index: usize) {
         self.entities.grow(index + 1);
@@ -112,7 +97,22 @@ impl EntityIdSet {
     }
 
     #[inline]
-    pub fn iter(&self) -> impl Iterator<Item = usize> + '_ {
+    pub fn union_with(&mut self, other: &Self) {
+        self.entities.union_with(&other.entities);
+    }
+
+    #[inline]
+    pub fn intersect_with(&mut self, other: &Self) {
+        self.entities.intersect_with(&other.entities);
+    }
+
+    #[inline]
+    pub fn difference_with(&mut self, other: &Self) {
+        self.entities.difference_with(&other.entities);
+    }
+
+    #[inline]
+    pub fn iter(&self) -> fixedbitset::Ones<'_> {
         self.entities.ones()
     }
 }
@@ -126,32 +126,188 @@ impl FromIterator<usize> for EntityIdSet {
     }
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct EntitySet {
-    entities: SparseArray<u32>,
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct EntityMeta {
+    pub generation: u32,
+    pub is_empty: bool,
 }
 
-impl EntitySet {
-    #[inline]
-    pub fn insert(&mut self, entity: Entity) {
-        self.entities
-            .insert(entity.index() as usize, entity.generation());
-    }
+impl EntityMeta {
+    pub const EMPTY: Self = Self::new(0, true);
 
     #[inline]
-    pub fn remove(&mut self, entity: Entity) -> bool {
-        self.entities.remove(entity.index() as usize).is_some()
+    pub const fn new(generation: u32, is_empty: bool) -> Self {
+        Self {
+            generation,
+            is_empty,
+        }
     }
+}
 
+#[derive(Debug, Default)]
+pub struct Entities {
+    pub(crate) meta: Vec<EntityMeta>,
+    pub(crate) entity_id_set: EntityIdSet,
+    pending: Vec<u32>,
+    free_cursor: AtomicIsize,
+    len: u32,
+}
+
+impl Entities {
     #[inline]
     pub fn contains(&self, entity: Entity) -> bool {
-        self.entities.get(entity.index() as usize) == Some(&entity.generation())
+        if let Some(meta) = self.meta.get(entity.index() as usize) {
+            meta.generation == entity.generation() && !meta.is_empty
+        } else {
+            false
+        }
     }
 
     #[inline]
-    pub fn iter(&self) -> impl Iterator<Item = Entity> + '_ {
-        self.entities
-            .iter()
-            .map(|(index, generation)| Entity::from_raw_parts(index as u32, *generation))
+    pub fn entity_ids(&self) -> &EntityIdSet {
+        &self.entity_id_set
+    }
+
+    #[inline]
+    pub fn len(&self) -> u32 {
+        self.len
+    }
+
+    #[inline]
+    pub fn reserve(&self) -> Entity {
+        let n = self.free_cursor.fetch_sub(1, Ordering::Relaxed);
+        if n > 0 {
+            let index = self.pending[n as usize - 1];
+            let meta = &self.meta[index as usize];
+
+            Entity {
+                index,
+                generation: meta.generation,
+            }
+        } else {
+            Entity {
+                index: u32::try_from(self.meta.len() as isize - n).expect("too many entities"),
+                generation: 0,
+            }
+        }
+    }
+
+    #[inline]
+    pub fn alloc(&mut self) -> Entity {
+        self.flush();
+        self.len += 1;
+        if let Some(index) = self.pending.pop() {
+            let new_free_cursor = self.pending.len() as isize;
+            *self.free_cursor.get_mut() = new_free_cursor;
+
+            let meta = &mut self.meta[index as usize];
+            meta.is_empty = false;
+
+            Entity {
+                index,
+                generation: meta.generation,
+            }
+        } else {
+            let index = u32::try_from(self.meta.len()).expect("too many entities");
+
+            self.meta.push(EntityMeta::default());
+            self.entity_id_set.insert(index as usize);
+
+            Entity {
+                index,
+                generation: 0,
+            }
+        }
+    }
+
+    #[inline]
+    pub fn free(&mut self, entity: Entity) -> bool {
+        self.flush();
+
+        let meta = if let Some(meta) = self.meta.get_mut(entity.index() as usize) {
+            meta
+        } else {
+            return false;
+        };
+
+        if meta.generation != entity.generation() {
+            return false;
+        }
+        meta.generation += 1;
+        meta.is_empty = true;
+
+        self.entity_id_set.remove(entity.index() as usize);
+
+        self.pending.push(entity.index());
+
+        let new_free_cursor = self.pending.len() as isize;
+        *self.free_cursor.get_mut() = new_free_cursor;
+
+        self.len -= 1;
+
+        true
+    }
+
+    #[inline]
+    pub fn needs_flush(&mut self) -> bool {
+        *self.free_cursor.get_mut() != self.pending.len() as isize
+    }
+
+    #[inline]
+    pub fn flush(&mut self) {
+        if !self.needs_flush() {
+            return;
+        }
+
+        let free_cursor = self.free_cursor.get_mut();
+        let current = *free_cursor;
+
+        let new_free_cursor = if current >= 0 {
+            current as usize
+        } else {
+            let current = -current as usize;
+
+            let old_meta_len = self.meta.len();
+            let new_meta_len = old_meta_len + current;
+
+            self.meta.resize(new_meta_len, EntityMeta::default());
+            self.entity_id_set.resize(new_meta_len, true);
+
+            self.len += current as u32;
+
+            *free_cursor = 0;
+            0
+        };
+
+        self.len += (self.pending.len() - new_free_cursor) as u32;
+        for index in self.pending.drain(new_free_cursor..) {
+            self.meta[index as usize].is_empty = false;
+            self.entity_id_set.insert(index as usize);
+        }
+    }
+
+    #[inline]
+    pub unsafe fn get_unchecked(&self, index: usize) -> Entity {
+        let generation = unsafe { self.meta.get_unchecked(index).generation };
+
+        Entity {
+            index: index as u32,
+            generation,
+        }
+    }
+
+    #[inline]
+    pub fn get(&self, index: usize) -> Option<Entity> {
+        let meta = self.meta.get(index)?;
+
+        if meta.is_empty {
+            return None;
+        }
+
+        Some(Entity {
+            index: index as u32,
+            generation: meta.generation,
+        })
     }
 }

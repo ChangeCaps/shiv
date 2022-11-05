@@ -85,6 +85,31 @@ impl ComponentStorage {
     pub fn remove(&mut self, entity: Entity) {
         self.sparse.remove(entity);
     }
+
+    #[inline]
+    pub fn contains(&self, id: ComponentId, entity: Entity) -> bool {
+        if let Some(storage) = self.sparse.get(id) {
+            return storage.contains(entity);
+        }
+
+        false
+    }
+
+    #[inline]
+    pub fn entity_ids(&self, id: ComponentId) -> EntityIdSet {
+        if let Some(sparse) = self.sparse.get(id) {
+            return sparse.entity_ids();
+        }
+
+        EntityIdSet::default()
+    }
+
+    #[inline]
+    pub fn check_change_ticks(&mut self, tick: u32) {
+        for (_, storage) in self.sparse.storage_sets.iter_mut() {
+            storage.check_change_ticks(tick);
+        }
+    }
 }
 
 pub trait StorageSet: Send + Sync + 'static {
@@ -94,7 +119,7 @@ pub trait StorageSet: Send + Sync + 'static {
     /// Returns `true` if the storage contains a component for the given entity.
     fn contains(&self, entity: Entity) -> bool;
 
-    fn entities(&self) -> EntityIdSet;
+    fn entity_ids(&self) -> EntityIdSet;
 
     /// Inserts a component for the given entity.
     ///
@@ -127,6 +152,12 @@ pub trait StorageSet: Send + Sync + 'static {
             None
         }
     }
+
+    /// Returns change ticks for the given entity.
+    ///
+    /// # Safety
+    /// - `entity` must be contained in the storage.
+    unsafe fn get_ticks_unchecked(&self, entity: Entity) -> &UnsafeCell<ChangeTicks>;
 
     /// Returns a pointer to the component for the given entity and it's change ticks.
     ///

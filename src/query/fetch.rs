@@ -1,4 +1,8 @@
-use crate::{Access, Component, ComponentId, Entity, Mut, Storage, StorageSet, Ticks, World};
+use std::any::type_name;
+
+use crate::{
+    Component, ComponentId, Entity, FilteredAccess, Mut, Storage, StorageSet, Ticks, World,
+};
 
 pub unsafe trait WorldQuery {
     type Item<'w>;
@@ -6,19 +10,28 @@ pub unsafe trait WorldQuery {
     type State: Send + Sync + Sized;
     type ReadOnly: ReadOnlyWorldQuery<State = Self::State>;
 
+    /// # Safety
+    /// - `state` must be the result of [`WorldQuery::init_state`] with the same `world`.
     unsafe fn init_fetch<'w>(
         world: &'w World,
         state: &Self::State,
         last_change_tick: u32,
         change_tick: u32,
     ) -> Self::Fetch<'w>;
+
+    /// Fetch a single item from the given `fetch` and `entity`.
     unsafe fn fetch<'w>(fetch: &mut Self::Fetch<'w>, entity: Entity) -> Self::Item<'w>;
+
+    /// Fetches the filter for this query.
     unsafe fn filter_fetch<'w>(_fetch: &mut Self::Fetch<'w>, _entity: Entity) -> bool {
         true
     }
 
+    /// Initialize the state required to fetch this query.
     fn init_state(world: &mut World) -> Self::State;
-    fn update_component_access(state: &Self::State, access: &mut Access<ComponentId>);
+
+    /// Update the component access for this query.
+    fn update_component_access(state: &Self::State, access: &mut FilteredAccess<ComponentId>);
 }
 
 pub unsafe trait ReadOnlyWorldQuery: WorldQuery<ReadOnly = Self> {}
@@ -47,7 +60,9 @@ unsafe impl WorldQuery for Entity {
     }
 
     fn init_state(_world: &mut World) -> Self::State {}
-    fn update_component_access(_state: &Self::State, _access: &mut Access<ComponentId>) {}
+    fn update_component_access(_state: &Self::State, access: &mut FilteredAccess<ComponentId>) {
+        access.read_entities();
+    }
 }
 
 unsafe impl ReadOnlyWorldQuery for Entity {}
@@ -87,7 +102,13 @@ unsafe impl<T: Component> WorldQuery for &T {
         world.init_component::<T>()
     }
 
-    fn update_component_access(&state: &Self::State, access: &mut Access<ComponentId>) {
+    fn update_component_access(&state: &Self::State, access: &mut FilteredAccess<ComponentId>) {
+        assert!(
+            !access.has_write(state),
+            "&{} conflicts with previous access in this query. Shared access cannot coexist with exclusive access.", 
+            type_name::<T>(),
+        );
+
         access.add_read(state);
     }
 }
@@ -138,7 +159,13 @@ unsafe impl<'a, T: Component> WorldQuery for &'a mut T {
         world.init_component::<T>()
     }
 
-    fn update_component_access(&state: &Self::State, access: &mut Access<ComponentId>) {
+    fn update_component_access(&state: &Self::State, access: &mut FilteredAccess<ComponentId>) {
+        assert!(
+            !access.has_read(state),
+            "&mut {} conflicts with previous access in this query. Mutable component access must be unique.", 
+            type_name::<T>(),
+        );
+
         access.add_write(state);
     }
 }
@@ -185,7 +212,7 @@ macro_rules! impl_world_query {
                 ($($ident::init_state(world),)*)
             }
 
-            fn update_component_access(state: &Self::State, access: &mut Access<ComponentId>) {
+            fn update_component_access(state: &Self::State, access: &mut FilteredAccess<ComponentId>) {
                 let ($($ident,)*) = state;
 
                 $(

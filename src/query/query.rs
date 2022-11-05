@@ -1,21 +1,30 @@
 use crate::{
-    Entity, EntityIdSet, QueryItem, ReadOnlyQueryItem, ReadOnlyWorldQuery, World, WorldId,
-    WorldQuery,
+    ComponentId, Entity, EntityIdSet, FilteredAccess, QueryItem, QueryIter, ReadOnlyQueryItem,
+    ReadOnlyWorldQuery, World, WorldId, WorldQuery,
 };
 
 pub struct QueryState<Q: WorldQuery, F: ReadOnlyWorldQuery> {
-    world_id: WorldId,
-    fetch_state: Q::State,
-    filter_state: F::State,
+    pub(crate) world_id: WorldId,
+    pub(crate) filtered_access: FilteredAccess<ComponentId>,
+    pub(crate) query_state: Q::State,
+    pub(crate) filter_state: F::State,
 }
 
 impl<Q: WorldQuery, F: ReadOnlyWorldQuery> QueryState<Q, F> {
     #[inline]
     pub fn new(world: &mut World) -> Self {
+        let query_state = Q::init_state(world);
+        let filter_state = F::init_state(world);
+
+        let mut filtered_access = FilteredAccess::new();
+        Q::update_component_access(&query_state, &mut filtered_access);
+        F::update_component_access(&filter_state, &mut filtered_access);
+
         Self {
             world_id: world.id(),
-            fetch_state: Q::init_state(world),
-            filter_state: F::init_state(world),
+            filtered_access,
+            query_state,
+            filter_state,
         }
     }
 
@@ -23,7 +32,56 @@ impl<Q: WorldQuery, F: ReadOnlyWorldQuery> QueryState<Q, F> {
     pub fn get_entities(&self, world: &World) -> EntityIdSet {
         self.debug_validate_world(world);
 
-        todo!()
+        let mut entities = if self.filtered_access.is_entities() {
+            world.entities.entity_ids().clone()
+        } else {
+            let mut entities = EntityIdSet::default();
+
+            for id in self.filtered_access.iter_read() {
+                entities.union_with(&world.storage.entity_ids(id));
+            }
+
+            entities
+        };
+
+        for id in self.filtered_access.iter_with() {
+            entities.intersect_with(&world.storage.entity_ids(id));
+        }
+
+        for id in self.filtered_access.iter_without() {
+            entities.difference_with(&world.storage.entity_ids(id));
+        }
+
+        entities
+    }
+
+    #[inline]
+    pub fn contains(&self, world: &World, entity: Entity) -> bool {
+        self.debug_validate_world(world);
+
+        if !world.contains_entity(entity) {
+            return false;
+        }
+
+        for id in self.filtered_access.iter_read() {
+            if !world.storage.contains(id, entity) {
+                return false;
+            }
+        }
+
+        for id in self.filtered_access.iter_with() {
+            if !world.storage.contains(id, entity) {
+                return false;
+            }
+        }
+
+        for id in self.filtered_access.iter_without() {
+            if world.storage.contains(id, entity) {
+                return false;
+            }
+        }
+
+        true
     }
 
     #[inline]
@@ -53,8 +111,12 @@ impl<Q: WorldQuery, F: ReadOnlyWorldQuery> QueryState<Q, F> {
         last_change_tick: u32,
         change_tick: u32,
     ) -> Option<Q::Item<'w>> {
+        if !self.contains(world, entity) {
+            return None;
+        }
+
         let mut fetch =
-            unsafe { Q::init_fetch(world, &self.fetch_state, last_change_tick, change_tick) };
+            unsafe { Q::init_fetch(world, &self.query_state, last_change_tick, change_tick) };
         let mut filter =
             unsafe { F::init_fetch(world, &self.filter_state, last_change_tick, change_tick) };
 
@@ -91,12 +153,47 @@ impl<Q: WorldQuery, F: ReadOnlyWorldQuery> QueryState<Q, F> {
     }
 
     #[inline]
-    pub fn get_mut<'w>(&self, world: &'w mut World, entity: Entity) -> Option<QueryItem<'w, Q>> {
+    pub fn get_mut<'w>(
+        &mut self,
+        world: &'w mut World,
+        entity: Entity,
+    ) -> Option<QueryItem<'w, Q>> {
         self.validate_world(world);
 
         unsafe {
             self.get_unchecked_manual(world, entity, world.last_change_tick(), world.change_tick())
         }
+    }
+
+    /// # Safety
+    /// - `world` must be the same world that was used to create this [`QueryState`].
+    #[inline]
+    pub unsafe fn iter_unchecked_manual<'w, 's>(
+        &'s self,
+        world: &'w World,
+        last_change_tick: u32,
+        change_tick: u32,
+    ) -> QueryIter<'w, 's, Q, F> {
+        self.debug_validate_world(world);
+        unsafe { QueryIter::new(self, world, last_change_tick, change_tick) }
+    }
+
+    #[inline]
+    pub fn iter<'w, 's>(&'s self, world: &'w World) -> QueryIter<'w, 's, Q::ReadOnly, F::ReadOnly> {
+        self.validate_world(world);
+        unsafe {
+            self.as_readonly().iter_unchecked_manual(
+                world,
+                world.last_change_tick(),
+                world.change_tick(),
+            )
+        }
+    }
+
+    #[inline]
+    pub fn iter_mut<'w, 's>(&'s mut self, world: &'w mut World) -> QueryIter<'w, 's, Q, F> {
+        self.validate_world(world);
+        unsafe { self.iter_unchecked_manual(world, world.last_change_tick(), world.change_tick()) }
     }
 }
 
@@ -126,6 +223,11 @@ impl<'w, 's, Q: WorldQuery, F: ReadOnlyWorldQuery> Query<'w, 's, Q, F> {
     }
 
     #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.state.get_entities(self.world).is_empty()
+    }
+
+    #[inline]
     pub fn get(&self, entity: Entity) -> Option<ReadOnlyQueryItem<'_, Q>> {
         let state = self.state.as_readonly();
         unsafe {
@@ -143,5 +245,22 @@ impl<'w, 's, Q: WorldQuery, F: ReadOnlyWorldQuery> Query<'w, 's, Q, F> {
                 self.change_tick,
             )
         }
+    }
+
+    #[inline]
+    pub fn iter(&self) -> QueryIter<Q::ReadOnly, F::ReadOnly> {
+        unsafe {
+            self.state.as_readonly().iter_unchecked_manual(
+                self.world,
+                self.last_change_tick,
+                self.change_tick,
+            )
+        }
+    }
+
+    #[inline]
+    pub fn iter_mut(&mut self) -> QueryIter<Q, F> {
+        let state = &self.state;
+        unsafe { state.iter_unchecked_manual(self.world, self.last_change_tick, self.change_tick) }
     }
 }

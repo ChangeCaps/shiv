@@ -8,6 +8,7 @@ pub struct Access<T> {
     write: FixedBitSet,
 
     read_all: bool,
+    entities: bool,
 
     _marker: PhantomData<fn() -> T>,
 }
@@ -20,6 +21,7 @@ impl<T> Default for Access<T> {
             write: FixedBitSet::with_capacity(0),
 
             read_all: false,
+            entities: false,
 
             _marker: PhantomData,
         }
@@ -68,6 +70,11 @@ where
     }
 
     #[inline]
+    pub fn read_entities(&mut self) {
+        self.entities = true;
+    }
+
+    #[inline]
     pub fn has_read(&self, index: T) -> bool {
         self.read_all || self.read.contains(index.into())
     }
@@ -92,6 +99,30 @@ where
     }
 
     #[inline]
+    pub fn is_entities(&self) -> bool {
+        self.read.is_empty() && !self.read_all && self.entities
+    }
+
+    #[inline]
+    pub fn get_conflicts(&self, other: &Self) -> Vec<T> {
+        let mut conflicts = Vec::new();
+
+        for read in self.iter_read() {
+            if other.has_write(read) {
+                conflicts.push(read);
+            }
+        }
+
+        for write in self.iter_write() {
+            if other.has_read(write) {
+                conflicts.push(write);
+            }
+        }
+
+        conflicts
+    }
+
+    #[inline]
     pub fn is_compatible(&self, other: &Self) -> bool {
         if self.read_all {
             return other.write.count_ones(..) == 0;
@@ -102,6 +133,16 @@ where
         }
 
         self.write.is_disjoint(&other.read) && self.read.is_disjoint(&other.write)
+    }
+
+    #[inline]
+    pub fn iter_read(&self) -> impl Iterator<Item = T> + '_ {
+        self.read.ones().map(T::from)
+    }
+
+    #[inline]
+    pub fn iter_write(&self) -> impl Iterator<Item = T> + '_ {
+        self.write.ones().map(T::from)
     }
 }
 
@@ -180,6 +221,53 @@ where
     }
 
     #[inline]
+    pub fn read_all(&mut self) {
+        self.access.read_all();
+    }
+
+    #[inline]
+    pub fn read_entities(&mut self) {
+        self.access.read_entities();
+    }
+
+    #[inline]
+    pub fn has_read(&self, index: T) -> bool {
+        self.access.has_read(index)
+    }
+
+    #[inline]
+    pub fn has_write(&self, index: T) -> bool {
+        self.access.has_write(index)
+    }
+
+    #[inline]
+    pub fn has_with(&self, index: T) -> bool {
+        self.with.contains(index.into())
+    }
+
+    #[inline]
+    pub fn has_without(&self, index: T) -> bool {
+        self.without.contains(index.into())
+    }
+
+    #[inline]
+    pub fn extend(&mut self, other: &Self) {
+        self.access.extend(&other.access);
+        self.with.union_with(&other.with);
+        self.without.union_with(&other.without);
+    }
+
+    #[inline]
+    pub fn is_entities(&self) -> bool {
+        self.access.is_entities()
+    }
+
+    #[inline]
+    pub fn get_conflicts(&self, other: &Self) -> Vec<T> {
+        self.access.get_conflicts(&other.access)
+    }
+
+    #[inline]
     pub fn compatible(&self, other: &Self) -> bool {
         if self.access().is_compatible(other.access()) {
             true
@@ -187,5 +275,32 @@ where
             self.with.intersection(&other.without).next().is_some()
                 && self.without.intersection(&other.with).next().is_some()
         }
+    }
+
+    #[inline]
+    pub fn iter_read(&self) -> impl Iterator<Item = T> + '_ {
+        self.access.iter_read()
+    }
+
+    #[inline]
+    pub fn iter_write(&self) -> impl Iterator<Item = T> + '_ {
+        self.access.iter_write()
+    }
+
+    #[inline]
+    pub fn iter_with(&self) -> impl Iterator<Item = T> + '_ {
+        self.with.ones().map(T::from)
+    }
+
+    #[inline]
+    pub fn iter_without(&self) -> impl Iterator<Item = T> + '_ {
+        self.without.ones().map(T::from)
+    }
+
+    #[inline]
+    pub fn clear(&mut self) {
+        self.access.clear();
+        self.with.clear();
+        self.without.clear();
     }
 }

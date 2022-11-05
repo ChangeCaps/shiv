@@ -1,6 +1,10 @@
 use std::{alloc::Layout, any::TypeId};
 
-use crate::{hash_map::HashMap, ComponentStorage, SparseStorage, StorageSet, StorageSets};
+use crate::{
+    hash_map::HashMap, ComponentStorage, Resource, SparseStorage, StorageSet, StorageSets,
+};
+
+pub use termite_macro::Component;
 
 pub trait Component: Send + Sync + 'static {
     type Storage: Storage;
@@ -25,17 +29,24 @@ impl Storage for SparseStorage {
 
 #[derive(Clone, Copy, Debug)]
 pub struct ComponentDescriptor {
+    name: &'static str,
     layout: Layout,
     drop: Option<unsafe fn(*mut u8)>,
 }
 
 impl ComponentDescriptor {
     #[inline]
-    pub const fn new<T: Component>() -> Self {
+    pub fn new<T>() -> Self {
         Self {
+            name: std::any::type_name::<T>(),
             layout: Layout::new::<T>(),
             drop: Some(|ptr| unsafe { std::ptr::drop_in_place(ptr as *mut T) }),
         }
+    }
+
+    #[inline]
+    pub const fn name(&self) -> &'static str {
+        self.name
     }
 
     #[inline]
@@ -64,6 +75,11 @@ impl ComponentInfo {
     #[inline]
     pub const fn descriptor(&self) -> &ComponentDescriptor {
         &self.descriptor
+    }
+
+    #[inline]
+    pub const fn name(&self) -> &'static str {
+        self.descriptor.name()
     }
 
     #[inline]
@@ -143,7 +159,7 @@ impl Components {
     }
 
     #[inline]
-    pub fn init_resource<T: Component>(&mut self) -> ComponentId {
+    pub fn init_resource<T: Resource>(&mut self) -> ComponentId {
         let type_id = TypeId::of::<T>();
 
         if let Some(index) = self.resource_indices.get(&type_id) {
@@ -161,18 +177,40 @@ impl Components {
     }
 
     #[inline]
+    pub fn get_component<T: Component>(&self) -> Option<ComponentId> {
+        let type_id = TypeId::of::<T>();
+
+        if let Some(index) = self.indices.get(&type_id) {
+            Some(ComponentId::new(*index))
+        } else {
+            None
+        }
+    }
+
+    #[inline]
+    pub fn get_resource<T: Resource>(&self) -> Option<ComponentId> {
+        let type_id = TypeId::of::<T>();
+
+        if let Some(index) = self.resource_indices.get(&type_id) {
+            Some(ComponentId::new(*index))
+        } else {
+            None
+        }
+    }
+
+    #[inline]
     pub fn contains_component<T: Component>(&self) -> bool {
         self.indices.contains_key(&TypeId::of::<T>())
     }
 
     #[inline]
-    pub fn contains_resource<T: Component>(&self) -> bool {
+    pub fn contains_resource<T: Resource>(&self) -> bool {
         self.resource_indices.contains_key(&TypeId::of::<T>())
     }
 
     #[inline]
-    pub fn get(&self, id: ComponentId) -> &ComponentInfo {
-        &self.components[id.index()]
+    pub fn get(&self, id: ComponentId) -> Option<&ComponentInfo> {
+        self.components.get(id.index())
     }
 
     #[inline]
