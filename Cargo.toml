@@ -2,6 +2,7 @@
 name = "termite"
 version = "0.1.0-alpha"
 edition = "2021"
+description = "A simple modern Entity Component System"
 repository = "https://github.com/ChangeCaps/termite"
 license = "MIT OR Apache-2.0"
 readme = "README.md"
