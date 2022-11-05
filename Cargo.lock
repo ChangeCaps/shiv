@@ -57,12 +57,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a40729d2133846d9ed0ea60a8b9541bccddab49cd30f0715a1da672fe9a2524"
 
 [[package]]
-name = "atomic-borrow"
-version = "0.1.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b9301c23263a35d4ac008738380eea4a143d730b0f42914371da7eeec4b1286f"
-
-[[package]]
 name = "autocfg"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -300,11 +294,10 @@ dependencies = [
 
 [[package]]
 name = "termite"
-version = "0.1.0"
+version = "0.1.0-alpha"
 dependencies = [
  "ahash 0.8.1",
  "async-channel",
- "atomic-borrow",
  "downcast-rs",
  "event-listener",
  "fixedbitset",

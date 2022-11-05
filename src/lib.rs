@@ -1,5 +1,7 @@
 #![deny(unsafe_op_in_unsafe_fn)]
 
+//! A simple modern Entity Component System (ECS).
+
 mod change_ticks;
 mod hash_map;
 mod query;
