@@ -168,6 +168,11 @@ impl<'w, T> Res<'w, T> {
         self.ticks
             .is_changed(self.last_change_tick, self.change_tick)
     }
+
+    #[inline]
+    pub fn into_inner(self) -> &'w T {
+        self.value
+    }
 }
 
 impl<'w, T> Deref for Res<'w, T> {
@@ -256,6 +261,11 @@ impl<'w, T> ResMut<'w, T> {
     pub fn is_changed(&self) -> bool {
         self.ticks
             .is_changed(self.last_change_tick, self.change_tick)
+    }
+
+    #[inline]
+    pub fn into_inner(self) -> &'w mut T {
+        self.value
     }
 }
 
