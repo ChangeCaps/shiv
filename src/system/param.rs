@@ -8,7 +8,6 @@ use crate::{
     ReadOnlyWorldQuery, Resource, SystemMeta, World, WorldQuery,
 };
 
-pub unsafe trait ReadOnlySystemParamState {}
 pub unsafe trait ReadOnlySystemParamFetch: for<'w, 's> SystemParamFetch<'w, 's> {}
 
 pub trait SystemParam: Sized {
@@ -110,13 +109,6 @@ where
     F: ReadOnlyWorldQuery + 'static,
 {
     type Fetch = QueryState<Q, F>;
-}
-
-unsafe impl<Q, F> ReadOnlySystemParamState for QueryState<Q, F>
-where
-    Q: ReadOnlyWorldQuery + 'static,
-    F: ReadOnlyWorldQuery + 'static,
-{
 }
 
 unsafe impl<Q, F> ReadOnlySystemParamFetch for QueryState<Q, F>
@@ -245,7 +237,6 @@ impl<'w, T: Resource> SystemParam for Res<'w, T> {
     type Fetch = ResState<T>;
 }
 
-unsafe impl<T: Resource> ReadOnlySystemParamState for ResState<T> {}
 unsafe impl<T: Resource> ReadOnlySystemParamFetch for ResState<T> {}
 
 pub struct ResMut<'w, T> {
