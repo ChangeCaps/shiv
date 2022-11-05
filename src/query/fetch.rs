@@ -19,10 +19,13 @@ pub unsafe trait WorldQuery {
         change_tick: u32,
     ) -> Self::Fetch<'w>;
 
+    fn contains<'w>(fetch: &mut Self::Fetch<'w>, entity: Entity) -> bool;
+
     /// Fetch a single item from the given `fetch` and `entity`.
     unsafe fn fetch<'w>(fetch: &mut Self::Fetch<'w>, entity: Entity) -> Self::Item<'w>;
 
     /// Fetches the filter for this query.
+    #[inline]
     unsafe fn filter_fetch<'w>(_fetch: &mut Self::Fetch<'w>, _entity: Entity) -> bool {
         true
     }
@@ -32,6 +35,9 @@ pub unsafe trait WorldQuery {
 
     /// Update the component access for this query.
     fn update_component_access(state: &Self::State, access: &mut FilteredAccess<ComponentId>);
+
+    /// Update the component access for this query.
+    fn matches_component_set(state: &Self::State, id: ComponentId) -> bool;
 }
 
 pub unsafe trait ReadOnlyWorldQuery: WorldQuery<ReadOnly = Self> {}
@@ -47,6 +53,7 @@ unsafe impl WorldQuery for Entity {
     type State = ();
     type ReadOnly = Self;
 
+    #[inline]
     unsafe fn init_fetch<'w>(
         _world: &'w World,
         _state: &Self::State,
@@ -55,13 +62,27 @@ unsafe impl WorldQuery for Entity {
     ) -> Self::Fetch<'w> {
     }
 
+    #[inline]
+    fn contains<'w>(_fetch: &mut Self::Fetch<'w>, _entity: Entity) -> bool {
+        true
+    }
+
+    #[inline]
     unsafe fn fetch<'w>(_fetch: &mut Self::Fetch<'w>, entity: Entity) -> Self::Item<'w> {
         entity
     }
 
+    #[inline]
     fn init_state(_world: &mut World) -> Self::State {}
+
+    #[inline]
     fn update_component_access(_state: &Self::State, access: &mut FilteredAccess<ComponentId>) {
         access.read_entities();
+    }
+
+    #[inline]
+    fn matches_component_set(_state: &Self::State, _id: ComponentId) -> bool {
+        true
     }
 }
 
@@ -77,6 +98,7 @@ unsafe impl<T: Component> WorldQuery for &T {
     type State = ComponentId;
     type ReadOnly = Self;
 
+    #[inline]
     unsafe fn init_fetch<'w>(
         world: &'w World,
         &state: &Self::State,
@@ -90,18 +112,27 @@ unsafe impl<T: Component> WorldQuery for &T {
         }
     }
 
+    #[inline]
+    fn contains<'w>(fetch: &mut Self::Fetch<'w>, entity: Entity) -> bool {
+        fetch.storage.contains(entity)
+    }
+
+    #[inline]
     unsafe fn fetch<'w>(fetch: &mut Self::Fetch<'w>, entity: Entity) -> Self::Item<'w> {
         unsafe { &*(fetch.storage.get_unchecked(entity) as *mut T) }
     }
 
+    #[inline]
     unsafe fn filter_fetch<'w>(fetch: &mut Self::Fetch<'w>, entity: Entity) -> bool {
         fetch.storage.contains(entity)
     }
 
+    #[inline]
     fn init_state(world: &mut World) -> Self::State {
         world.init_component::<T>()
     }
 
+    #[inline]
     fn update_component_access(&state: &Self::State, access: &mut FilteredAccess<ComponentId>) {
         assert!(
             !access.has_write(state),
@@ -110,6 +141,11 @@ unsafe impl<T: Component> WorldQuery for &T {
         );
 
         access.add_read(state);
+    }
+
+    #[inline]
+    fn matches_component_set(&state: &Self::State, id: ComponentId) -> bool {
+        state == id
     }
 }
 
@@ -127,6 +163,7 @@ unsafe impl<'a, T: Component> WorldQuery for &'a mut T {
     type State = ComponentId;
     type ReadOnly = &'a T;
 
+    #[inline]
     unsafe fn init_fetch<'w>(
         world: &'w World,
         &state: &Self::State,
@@ -142,6 +179,12 @@ unsafe impl<'a, T: Component> WorldQuery for &'a mut T {
         }
     }
 
+    #[inline]
+    fn contains<'w>(fetch: &mut Self::Fetch<'w>, entity: Entity) -> bool {
+        fetch.storage.contains(entity)
+    }
+
+    #[inline]
     unsafe fn fetch<'w>(fetch: &mut Self::Fetch<'w>, entity: Entity) -> Self::Item<'w> {
         let (value, ticks) = unsafe { fetch.storage.get_with_ticks_unchecked(entity) };
 
@@ -155,10 +198,12 @@ unsafe impl<'a, T: Component> WorldQuery for &'a mut T {
         }
     }
 
+    #[inline]
     fn init_state(world: &mut World) -> Self::State {
         world.init_component::<T>()
     }
 
+    #[inline]
     fn update_component_access(&state: &Self::State, access: &mut FilteredAccess<ComponentId>) {
         assert!(
             !access.has_read(state),
@@ -168,7 +213,68 @@ unsafe impl<'a, T: Component> WorldQuery for &'a mut T {
 
         access.add_write(state);
     }
+
+    #[inline]
+    fn matches_component_set(&state: &Self::State, id: ComponentId) -> bool {
+        state == id
+    }
 }
+
+pub struct OptionFetch<'w, T: WorldQuery> {
+    fetch: T::Fetch<'w>,
+}
+
+unsafe impl<T: WorldQuery> WorldQuery for Option<T> {
+    type Item<'w> = Option<T::Item<'w>>;
+    type Fetch<'w> = OptionFetch<'w, T>;
+    type State = T::State;
+    type ReadOnly = Option<T::ReadOnly>;
+
+    #[inline]
+    unsafe fn init_fetch<'w>(
+        world: &'w World,
+        state: &Self::State,
+        last_change_tick: u32,
+        change_tick: u32,
+    ) -> Self::Fetch<'w> {
+        OptionFetch {
+            fetch: unsafe { T::init_fetch(world, state, last_change_tick, change_tick) },
+        }
+    }
+
+    #[inline]
+    fn contains<'w>(_fetch: &mut Self::Fetch<'w>, _entity: Entity) -> bool {
+        true
+    }
+
+    #[inline]
+    unsafe fn fetch<'w>(fetch: &mut Self::Fetch<'w>, entity: Entity) -> Self::Item<'w> {
+        if T::contains(&mut fetch.fetch, entity) {
+            Some(unsafe { T::fetch(&mut fetch.fetch, entity) })
+        } else {
+            None
+        }
+    }
+
+    #[inline]
+    fn init_state(world: &mut World) -> Self::State {
+        T::init_state(world)
+    }
+
+    #[inline]
+    fn update_component_access(state: &Self::State, access: &mut FilteredAccess<ComponentId>) {
+        let mut intermediate = access.clone();
+        T::update_component_access(state, &mut intermediate);
+        access.access_mut().extend(intermediate.access());
+    }
+
+    #[inline]
+    fn matches_component_set(_state: &Self::State, _id: ComponentId) -> bool {
+        true
+    }
+}
+
+unsafe impl<T: ReadOnlyWorldQuery> ReadOnlyWorldQuery for Option<T> {}
 
 macro_rules! impl_world_query {
     (@ $($ident:ident),*) => {
@@ -179,6 +285,7 @@ macro_rules! impl_world_query {
             type State = ($($ident::State,)*);
             type ReadOnly = ($($ident::ReadOnly,)*);
 
+            #[inline]
             unsafe fn init_fetch<'w>(
                 world: &'w World,
                 ($($ident,)*): &Self::State,
@@ -188,6 +295,12 @@ macro_rules! impl_world_query {
                 unsafe { ($($ident::init_fetch(world, $ident, last_change_tick, change_tick),)*) }
             }
 
+            #[inline]
+            fn contains<'w>(($($ident,)*): &mut Self::Fetch<'w>, entity: Entity) -> bool {
+                $($ident::contains($ident, entity) &&)* true
+            }
+
+            #[inline]
             unsafe fn fetch<'w>(
                 ($($ident,)*): &mut Self::Fetch<'w>,
                 entity: Entity,
@@ -195,6 +308,7 @@ macro_rules! impl_world_query {
                 unsafe { ($($ident::fetch($ident, entity),)*) }
             }
 
+            #[inline]
             unsafe fn filter_fetch<'w>(
                 ($($ident,)*): &mut Self::Fetch<'w>,
                 entity: Entity,
@@ -208,16 +322,19 @@ macro_rules! impl_world_query {
                 true
             }
 
+            #[inline]
             fn init_state(world: &mut World) -> Self::State {
                 ($($ident::init_state(world),)*)
             }
 
-            fn update_component_access(state: &Self::State, access: &mut FilteredAccess<ComponentId>) {
-                let ($($ident,)*) = state;
+            #[inline]
+            fn update_component_access(($($ident,)*): &Self::State, access: &mut FilteredAccess<ComponentId>) {
+                $($ident::update_component_access($ident, access);)*
+            }
 
-                $(
-                    $ident::update_component_access($ident, access);
-                )*
+            #[inline]
+            fn matches_component_set(($($ident,)*): &Self::State, id: ComponentId) -> bool {
+                $($ident::matches_component_set($ident, id) ||)* false
             }
         }
 

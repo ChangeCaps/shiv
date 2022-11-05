@@ -24,6 +24,10 @@ unsafe impl<T: Component> WorldQuery for With<T> {
     ) -> Self::Fetch<'w> {
     }
 
+    fn contains<'w>(_fetch: &mut Self::Fetch<'w>, _entity: Entity) -> bool {
+        true
+    }
+
     unsafe fn fetch<'w>(_fetch: &mut Self::Fetch<'w>, _entity: Entity) -> Self::Item<'w> {}
 
     fn init_state(world: &mut World) -> Self::State {
@@ -32,6 +36,10 @@ unsafe impl<T: Component> WorldQuery for With<T> {
 
     fn update_component_access(&state: &Self::State, access: &mut FilteredAccess<ComponentId>) {
         access.add_with(state);
+    }
+
+    fn matches_component_set(&state: &Self::State, id: ComponentId) -> bool {
+        state == id
     }
 }
 
@@ -56,6 +64,10 @@ unsafe impl<T: Component> WorldQuery for Without<T> {
     ) -> Self::Fetch<'w> {
     }
 
+    fn contains<'w>(_fetch: &mut Self::Fetch<'w>, _entity: Entity) -> bool {
+        true
+    }
+
     unsafe fn fetch<'w>(_fetch: &mut Self::Fetch<'w>, _entity: Entity) -> Self::Item<'w> {}
 
     fn init_state(world: &mut World) -> Self::State {
@@ -64,6 +76,10 @@ unsafe impl<T: Component> WorldQuery for Without<T> {
 
     fn update_component_access(&state: &Self::State, access: &mut FilteredAccess<ComponentId>) {
         access.add_without(state);
+    }
+
+    fn matches_component_set(&state: &Self::State, id: ComponentId) -> bool {
+        state != id
     }
 }
 
@@ -102,15 +118,19 @@ unsafe impl<T: Component> WorldQuery for Added<T> {
         }
     }
 
-    unsafe fn fetch<'w>(fetch: &mut Self::Fetch<'w>, entity: Entity) -> Self::Item<'w> {
+    fn contains<'w>(fetch: &mut Self::Fetch<'w>, entity: Entity) -> bool {
         let ticks = unsafe { fetch.storage.get_ticks_unchecked(entity) };
         let ticks = unsafe { &*ticks.get() };
 
         ticks.is_changed(fetch.last_change_tick, fetch.change_tick)
     }
 
+    unsafe fn fetch<'w>(fetch: &mut Self::Fetch<'w>, entity: Entity) -> Self::Item<'w> {
+        Self::contains(fetch, entity)
+    }
+
     unsafe fn filter_fetch<'w>(fetch: &mut Self::Fetch<'w>, entity: Entity) -> bool {
-        unsafe { Self::fetch(fetch, entity) }
+        Self::contains(fetch, entity)
     }
 
     fn init_state(world: &mut World) -> Self::State {
@@ -125,6 +145,10 @@ unsafe impl<T: Component> WorldQuery for Added<T> {
         );
 
         access.add_read(state);
+    }
+
+    fn matches_component_set(&state: &Self::State, id: ComponentId) -> bool {
+        state == id
     }
 }
 
@@ -163,15 +187,19 @@ unsafe impl<T: Component> WorldQuery for Changed<T> {
         }
     }
 
-    unsafe fn fetch<'w>(fetch: &mut Self::Fetch<'w>, entity: Entity) -> Self::Item<'w> {
+    fn contains<'w>(fetch: &mut Self::Fetch<'w>, entity: Entity) -> bool {
         let ticks = unsafe { fetch.storage.get_ticks_unchecked(entity) };
         let ticks = unsafe { &*ticks.get() };
 
         ticks.is_changed(fetch.last_change_tick, fetch.change_tick)
     }
 
+    unsafe fn fetch<'w>(fetch: &mut Self::Fetch<'w>, entity: Entity) -> Self::Item<'w> {
+        Self::contains(fetch, entity)
+    }
+
     unsafe fn filter_fetch<'w>(fetch: &mut Self::Fetch<'w>, entity: Entity) -> bool {
-        unsafe { Self::fetch(fetch, entity) }
+        Self::contains(fetch, entity)
     }
 
     fn init_state(world: &mut World) -> Self::State {
@@ -186,6 +214,10 @@ unsafe impl<T: Component> WorldQuery for Changed<T> {
         );
 
         access.add_read(state);
+    }
+
+    fn matches_component_set(&state: &Self::State, id: ComponentId) -> bool {
+        state == id
     }
 }
 

@@ -1,0 +1,15 @@
+[package]
+name = "termite-transform"
+version = "0.1.0-alpha"
+edition = "2021"
+description = "A simple transform system for termite"
+repository = "https://github.com/ChangeCaps/termite"
+license = "MIT OR Apache-2.0"
+readme = "README.md"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+termite = { path = "..", version = "0.1.0-alpha" }
+
+glam = "0.22"

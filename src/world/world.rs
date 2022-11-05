@@ -418,4 +418,22 @@ mod tests {
         assert_eq!(iter.next().unwrap(), (entity2, &3));
         assert!(iter.next().is_none());
     }
+
+    #[test]
+    fn query_option() {
+        let mut world = World::new();
+
+        world.spawn().insert(2i32);
+        world.spawn();
+        world.spawn().insert(3i32).insert(true);
+        world.spawn().insert(4i32);
+
+        let query = world.query::<(&i32, Option<&bool>)>();
+        let mut iter = query.iter(&world);
+
+        assert_eq!(iter.next().unwrap(), (&2, None));
+        assert_eq!(iter.next().unwrap(), (&3, Some(&true)));
+        assert_eq!(iter.next().unwrap(), (&4, None));
+        assert!(iter.next().is_none());
+    }
 }

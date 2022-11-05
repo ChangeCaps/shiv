@@ -35,17 +35,17 @@ impl<Q: WorldQuery, F: ReadOnlyWorldQuery> QueryState<Q, F> {
         let mut entities = if self.filtered_access.is_entities() {
             world.entities.entity_ids().clone()
         } else {
-            let mut entities = EntityIdSet::default();
-
-            for id in self.filtered_access.iter_read() {
-                entities.union_with(&world.storage.entity_ids(id));
-            }
-
-            entities
+            EntityIdSet::new()
         };
 
+        let mut is_first = true;
         for id in self.filtered_access.iter_with() {
-            entities.intersect_with(&world.storage.entity_ids(id));
+            if is_first {
+                entities.union_with(&world.storage.entity_ids(id));
+                is_first = false;
+            } else {
+                entities.intersect_with(&world.storage.entity_ids(id));
+            }
         }
 
         for id in self.filtered_access.iter_without() {
@@ -61,12 +61,6 @@ impl<Q: WorldQuery, F: ReadOnlyWorldQuery> QueryState<Q, F> {
 
         if !world.contains_entity(entity) {
             return false;
-        }
-
-        for id in self.filtered_access.iter_read() {
-            if !world.storage.contains(id, entity) {
-                return false;
-            }
         }
 
         for id in self.filtered_access.iter_with() {
@@ -225,6 +219,11 @@ impl<'w, 's, Q: WorldQuery, F: ReadOnlyWorldQuery> Query<'w, 's, Q, F> {
     #[inline]
     pub fn is_empty(&self) -> bool {
         self.state.get_entities(self.world).is_empty()
+    }
+
+    #[inline]
+    pub fn contains(&self, entity: Entity) -> bool {
+        self.state.contains(self.world, entity)
     }
 
     #[inline]

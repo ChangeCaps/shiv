@@ -10,7 +10,7 @@ readme = "README.md"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [workspace]
-members = ["termite-macro"]
+members = ["termite-macro", "termite-transform"]
 
 [dependencies]
 termite-macro = { path = "termite-macro", version = "0.1.0-alpha" }
