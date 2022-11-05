@@ -337,6 +337,70 @@ impl<'w, T: Resource> SystemParam for ResMut<'w, T> {
     type Fetch = ResMutState<T>;
 }
 
+#[doc(hidden)]
+pub struct OptionResState<T>(ResState<T>);
+
+unsafe impl<T: Resource> SystemParamState for OptionResState<T> {
+    #[inline]
+    fn init(world: &mut World, meta: &mut SystemMeta) -> Self {
+        Self(ResState::init(world, meta))
+    }
+}
+
+impl<'w, 's, T: Resource> SystemParamFetch<'w, 's> for OptionResState<T> {
+    type Item = Option<Res<'w, T>>;
+
+    #[inline]
+    unsafe fn get_param(
+        &'s mut self,
+        meta: &SystemMeta,
+        world: &'w World,
+        change_tick: u32,
+    ) -> Self::Item {
+        if world.resources.contains(self.0.component_id) {
+            Some(unsafe { ResState::get_param(&mut self.0, meta, world, change_tick) })
+        } else {
+            None
+        }
+    }
+}
+
+impl<'w, T: Resource> SystemParam for Option<Res<'w, T>> {
+    type Fetch = OptionResState<T>;
+}
+
+#[doc(hidden)]
+pub struct OptionResMutState<T>(ResMutState<T>);
+
+unsafe impl<T: Resource> SystemParamState for OptionResMutState<T> {
+    #[inline]
+    fn init(world: &mut World, meta: &mut SystemMeta) -> Self {
+        Self(ResMutState::init(world, meta))
+    }
+}
+
+impl<'w, 's, T: Resource> SystemParamFetch<'w, 's> for OptionResMutState<T> {
+    type Item = Option<ResMut<'w, T>>;
+
+    #[inline]
+    unsafe fn get_param(
+        &'s mut self,
+        meta: &SystemMeta,
+        world: &'w World,
+        change_tick: u32,
+    ) -> Self::Item {
+        if world.resources.contains(self.0.component_id) {
+            Some(unsafe { ResMutState::get_param(&mut self.0, meta, world, change_tick) })
+        } else {
+            None
+        }
+    }
+}
+
+impl<'w, T: Resource> SystemParam for Option<ResMut<'w, T>> {
+    type Fetch = OptionResMutState<T>;
+}
+
 macro_rules! impl_system_param {
     (@ $($param:ident),*) => {
         impl<$($param: SystemParam),*> SystemParam for ($($param,)*) {
