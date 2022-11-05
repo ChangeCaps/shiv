@@ -3,6 +3,7 @@
 //! A simple modern Entity Component System (ECS).
 
 mod change_ticks;
+mod event;
 mod hash_map;
 mod query;
 mod schedule;
@@ -11,6 +12,7 @@ mod system;
 mod world;
 
 pub use change_ticks::*;
+pub use event::*;
 pub use query::*;
 pub use schedule::*;
 pub use storage::*;

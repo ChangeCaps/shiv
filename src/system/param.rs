@@ -1,10 +1,11 @@
 use std::{
+    cell::UnsafeCell,
     marker::PhantomData,
     ops::{Deref, DerefMut},
 };
 
 use crate::{
-    Access, ChangeTicks, CommandQueue, Commands, ComponentId, Query, QueryState,
+    Access, ChangeTicks, CommandQueue, Commands, ComponentId, FromWorld, Query, QueryState,
     ReadOnlyWorldQuery, Resource, SystemMeta, World, WorldQuery,
 };
 
@@ -399,6 +400,69 @@ impl<'w, 's, T: Resource> SystemParamFetch<'w, 's> for OptionResMutState<T> {
 
 impl<'w, T: Resource> SystemParam for Option<ResMut<'w, T>> {
     type Fetch = OptionResMutState<T>;
+}
+
+pub struct Local<'s, T: FromWorld + Send + 'static> {
+    value: &'s mut T,
+}
+
+impl<'s, T> Deref for Local<'s, T>
+where
+    T: FromWorld + Send + 'static,
+{
+    type Target = T;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        self.value
+    }
+}
+
+impl<'s, T> DerefMut for Local<'s, T>
+where
+    T: FromWorld + Send + 'static,
+{
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.value
+    }
+}
+
+pub struct LocalState<T: Send + 'static> {
+    value: UnsafeCell<T>,
+}
+
+unsafe impl<T: Send> Sync for LocalState<T> {}
+
+unsafe impl<T: FromWorld + Send + 'static> ReadOnlySystemParamFetch for LocalState<T> {}
+
+unsafe impl<T: FromWorld + Send + 'static> SystemParamState for LocalState<T> {
+    #[inline]
+    fn init(world: &mut World, _meta: &mut SystemMeta) -> Self {
+        Self {
+            value: UnsafeCell::new(T::from_world(world)),
+        }
+    }
+}
+
+impl<'w, 's, T: FromWorld + Send + 'static> SystemParamFetch<'w, 's> for LocalState<T> {
+    type Item = Local<'s, T>;
+
+    #[inline]
+    unsafe fn get_param(
+        &'s mut self,
+        _meta: &SystemMeta,
+        _world: &'w World,
+        _change_tick: u32,
+    ) -> Self::Item {
+        Local {
+            value: unsafe { &mut *self.value.get() },
+        }
+    }
+}
+
+impl<'w, T: FromWorld + Send + 'static> SystemParam for Local<'w, T> {
+    type Fetch = LocalState<T>;
 }
 
 macro_rules! impl_system_param {

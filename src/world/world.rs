@@ -16,6 +16,16 @@ impl WorldId {
     }
 }
 
+pub trait FromWorld: Sized {
+    fn from_world(world: &World) -> Self;
+}
+
+impl<T: Default> FromWorld for T {
+    fn from_world(_: &World) -> Self {
+        Self::default()
+    }
+}
+
 pub struct World {
     id: WorldId,
     pub(crate) entities: Entities,
