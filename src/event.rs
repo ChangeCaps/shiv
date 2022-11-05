@@ -238,6 +238,8 @@ unsafe impl<E: Event> ReadOnlySystemParamFetch for EventReaderState<E> {}
 unsafe impl<E: Event> SystemParamState for EventReaderState<E> {
     #[inline]
     fn init(world: &mut World, meta: &mut SystemMeta) -> Self {
+        world.init_resource::<Events<E>>();
+
         Self {
             reader: LocalState::init(world, meta),
             events: ResState::init(world, meta),
@@ -292,6 +294,8 @@ pub struct EventWriterState<E: Event> {
 unsafe impl<E: Event> SystemParamState for EventWriterState<E> {
     #[inline]
     fn init(world: &mut World, meta: &mut SystemMeta) -> Self {
+        world.init_resource::<Events<E>>();
+
         Self {
             events: ResMutState::init(world, meta),
         }

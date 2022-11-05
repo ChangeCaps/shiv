@@ -28,6 +28,18 @@ pub struct ParallelExecutor {
 impl Default for ParallelExecutor {
     #[inline]
     fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl ParallelExecutor {
+    #[inline]
+    pub fn new() -> Self {
+        Self::new_with_task_pool(TaskPool::new().expect("Failed to create task pool"))
+    }
+
+    #[inline]
+    pub fn new_with_task_pool(task_pool: TaskPool) -> Self {
         let (finished_sender, finished_receiver) = async_channel::unbounded();
 
         Self {
@@ -37,12 +49,10 @@ impl Default for ParallelExecutor {
             queued: FixedBitSet::new(),
             running: FixedBitSet::new(),
             current_access: Access::default(),
-            task_pool: TaskPool::new().expect("Failed to create task pool"),
+            task_pool,
         }
     }
-}
 
-impl ParallelExecutor {
     #[inline]
     fn queued_count(&self) -> usize {
         self.queued.count_ones(..)

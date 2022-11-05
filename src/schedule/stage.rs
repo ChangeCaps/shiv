@@ -1,5 +1,6 @@
 use ahash::HashSet;
 use downcast_rs::{impl_downcast, Downcast};
+use hyena::TaskPool;
 
 use crate::{
     hash_map::HashMap, IntoSystemDescriptor, ParallelExecutor, SequentialExecutor, SystemContainer,
@@ -49,7 +50,11 @@ impl SystemStage {
     }
 
     pub fn parallel() -> Self {
-        Self::new(ParallelExecutor::default())
+        Self::new(ParallelExecutor::new())
+    }
+
+    pub fn parallel_with_task_pool(task_pool: TaskPool) -> Self {
+        Self::new(ParallelExecutor::new_with_task_pool(task_pool))
     }
 
     pub fn add_system<Params>(&mut self, system: impl IntoSystemDescriptor<Params>) {

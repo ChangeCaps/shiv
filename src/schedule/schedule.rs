@@ -1,8 +1,10 @@
+use hyena::TaskPool;
+
 use crate::{
     hash_map::HashMap, IntoSystemDescriptor, Stage, StageLabel, StageLabelId, SystemStage, World,
 };
 
-use crate as termite;
+use crate::{self as termite, Event, Events};
 
 #[derive(StageLabel)]
 pub enum CoreStage {
@@ -37,8 +39,15 @@ impl Schedule {
     pub fn new() -> Self {
         let mut schedule = Self::empty();
 
-        schedule.add_stage(CoreStage::First, SystemStage::parallel());
-        schedule.add_stage(CoreStage::Last, SystemStage::parallel());
+        let task_pool = TaskPool::new().expect("Failed to create task pool");
+        schedule.add_stage(
+            CoreStage::First,
+            SystemStage::parallel_with_task_pool(task_pool.clone()),
+        );
+        schedule.add_stage(
+            CoreStage::Last,
+            SystemStage::parallel_with_task_pool(task_pool.clone()),
+        );
 
         schedule
     }
@@ -174,6 +183,12 @@ impl Schedule {
         stage.add_system(system);
 
         self
+    }
+
+    pub fn add_event<E: Event>(&mut self) {
+        if let Some(stage) = self.get_stage_mut::<SystemStage>(CoreStage::First) {
+            stage.add_system(Events::<E>::update_system);
+        }
     }
 
     pub fn run_once(&mut self, world: &mut World) {

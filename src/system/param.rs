@@ -192,6 +192,7 @@ impl<'w, T> AsRef<T> for Res<'w, T> {
     }
 }
 
+#[doc(hidden)]
 pub struct ResState<T> {
     component_id: ComponentId,
     marker: PhantomData<T>,
@@ -287,6 +288,7 @@ impl<'w, T> DerefMut for ResMut<'w, T> {
     }
 }
 
+#[doc(hidden)]
 pub struct ResMutState<T> {
     component_id: ComponentId,
     marker: PhantomData<T>,
@@ -428,6 +430,7 @@ where
     }
 }
 
+#[doc(hidden)]
 pub struct LocalState<T: Send + 'static> {
     value: UnsafeCell<T>,
 }
