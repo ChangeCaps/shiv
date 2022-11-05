@@ -12,4 +12,4 @@ readme = "README.md"
 [dependencies]
 termite = { path = "..", version = "0.1.0-alpha" }
 
-glam = "0.22"
+glam = "0.21"
