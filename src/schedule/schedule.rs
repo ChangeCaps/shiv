@@ -79,11 +79,18 @@ impl Schedule {
         self
     }
 
+    /// Adds a new stage to the schedule just before [`CoreStage::Last`].
+    ///
+    /// If [`CoreStage::Last`] is not present, `stage` will be added at the end.
     pub fn add_stage(&mut self, label: impl StageLabel, stage: impl Stage) -> &mut Self {
         let id = label.label();
 
+        let index = self
+            .stage_index(CoreStage::Last.label())
+            .unwrap_or(self.stage_order.len() - 1);
+
         self.stages.insert(id, Box::new(stage));
-        self.stage_order.push(id);
+        self.stage_order.insert(index - 1, id);
 
         self
     }
