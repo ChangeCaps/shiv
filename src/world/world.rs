@@ -196,7 +196,8 @@ impl World {
         if self.contains_entity(entity) {
             EntityMut::new(self, entity)
         } else {
-            self.spawn()
+            self.entities.alloc_at(entity);
+            EntityMut::new(self, entity)
         }
     }
 

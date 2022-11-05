@@ -46,11 +46,8 @@ impl<'w, 's> Commands<'w, 's> {
 
     #[inline]
     pub fn get_or_spawn<'a>(&'a mut self, entity: Entity) -> EntityCommands<'w, 's, 'a> {
-        if self.world.contains_entity(entity) {
-            EntityCommands::new(self, entity)
-        } else {
-            self.spawn()
-        }
+        self.add(GetOrSpawn { entity });
+        EntityCommands::new(self, entity)
     }
 
     #[inline]
@@ -152,5 +149,15 @@ pub struct Despawn {
 impl Command for Despawn {
     fn apply(self: Box<Self>, world: &mut World) {
         world.despawn(self.entity);
+    }
+}
+
+pub struct GetOrSpawn {
+    entity: Entity,
+}
+
+impl Command for GetOrSpawn {
+    fn apply(self: Box<Self>, world: &mut World) {
+        world.get_or_spawn(self.entity);
     }
 }

@@ -222,6 +222,32 @@ impl Entities {
     }
 
     #[inline]
+    pub fn alloc_at(&mut self, entity: Entity) {
+        self.flush();
+
+        if entity.index() as usize >= self.meta.len() {
+            self.pending.extend(self.meta.len() as u32..entity.index());
+
+            let new_free_cursor = self.pending.len() as isize;
+            *self.free_cursor.get_mut() = new_free_cursor;
+
+            self.meta
+                .resize(entity.index() as usize + 1, EntityMeta::EMPTY);
+
+            self.len += 1;
+        } else if let Some(index) = self.pending.iter().position(|&i| i == entity.index()) {
+            self.pending.swap_remove(index);
+
+            let new_free_cursor = self.pending.len() as isize;
+            *self.free_cursor.get_mut() = new_free_cursor;
+
+            self.len += 1;
+        }
+
+        self.meta[entity.index() as usize] = EntityMeta::new(entity.generation(), false);
+    }
+
+    #[inline]
     pub fn free(&mut self, entity: Entity) -> bool {
         self.flush();
 
