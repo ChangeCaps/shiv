@@ -13,7 +13,7 @@ readme = "README.md"
 members = ["termite-macro"]
 
 [dependencies]
-termite-macro = { path = "termite-macro", version = "0.1" }
+termite-macro = { path = "termite-macro", version = "0.1.0-alpha" }
 
 ahash = "0.8"
 async-channel = "1.7"
