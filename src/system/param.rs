@@ -340,6 +340,198 @@ impl<'w, T: Resource> SystemParam for ResMut<'w, T> {
     type Fetch = ResMutState<T>;
 }
 
+pub struct InitRes<'w, T> {
+    value: &'w T,
+    ticks: &'w ChangeTicks,
+    last_change_tick: u32,
+    change_tick: u32,
+}
+
+impl<'w, T> InitRes<'w, T> {
+    #[inline]
+    pub fn is_added(&self) -> bool {
+        self.ticks.is_added(self.last_change_tick, self.change_tick)
+    }
+
+    #[inline]
+    pub fn is_changed(&self) -> bool {
+        self.ticks
+            .is_changed(self.last_change_tick, self.change_tick)
+    }
+
+    #[inline]
+    pub fn into_inner(self) -> &'w T {
+        self.value
+    }
+}
+
+impl<'w, T> Deref for InitRes<'w, T> {
+    type Target = T;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        self.value
+    }
+}
+
+impl<'w, T> AsRef<T> for InitRes<'w, T> {
+    #[inline]
+    fn as_ref(&self) -> &T {
+        self.value
+    }
+}
+
+#[doc(hidden)]
+pub struct InitResState<T> {
+    component_id: ComponentId,
+    marker: PhantomData<T>,
+}
+
+unsafe impl<T: Resource + FromWorld> SystemParamState for InitResState<T> {
+    fn init(world: &mut World, meta: &mut SystemMeta) -> Self {
+        world.init_resource::<T>();
+
+        let component_id = world.components.init_resource::<T>();
+
+        meta.access.add_read(component_id);
+
+        Self {
+            component_id,
+            marker: PhantomData,
+        }
+    }
+}
+
+impl<'w, 's, T: Resource + FromWorld> SystemParamFetch<'w, 's> for InitResState<T> {
+    type Item = InitRes<'w, T>;
+
+    unsafe fn get_param(
+        &'s mut self,
+        meta: &SystemMeta,
+        world: &'w World,
+        change_tick: u32,
+    ) -> Self::Item {
+        let (ptr, ticks) = world
+            .resources
+            .get_with_ticks(self.component_id)
+            .unwrap_or_else(|| {
+                panic!(
+                    "Resource requested by system {} does not exist: {}.",
+                    meta.name(),
+                    std::any::type_name::<T>()
+                )
+            });
+
+        InitRes {
+            value: unsafe { &*ptr.cast::<T>() },
+            ticks: unsafe { &*ticks },
+            last_change_tick: meta.last_change_tick,
+            change_tick,
+        }
+    }
+}
+
+impl<'w, T: Resource + FromWorld> SystemParam for InitRes<'w, T> {
+    type Fetch = InitResState<T>;
+}
+
+unsafe impl<T: Resource + FromWorld> ReadOnlySystemParamFetch for InitResState<T> {}
+
+pub struct InitResMut<'w, T> {
+    value: &'w mut T,
+    ticks: &'w mut ChangeTicks,
+    last_change_tick: u32,
+    change_tick: u32,
+}
+
+impl<'w, T> InitResMut<'w, T> {
+    #[inline]
+    pub fn is_added(&self) -> bool {
+        self.ticks.is_added(self.last_change_tick, self.change_tick)
+    }
+
+    #[inline]
+    pub fn is_changed(&self) -> bool {
+        self.ticks
+            .is_changed(self.last_change_tick, self.change_tick)
+    }
+
+    #[inline]
+    pub fn into_inner(self) -> &'w mut T {
+        self.value
+    }
+}
+
+impl<'w, T> Deref for InitResMut<'w, T> {
+    type Target = T;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        self.value
+    }
+}
+
+impl<'w, T> DerefMut for InitResMut<'w, T> {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.ticks.set_changed(self.change_tick);
+        self.value
+    }
+}
+
+pub struct InitResMutState<T> {
+    component_id: ComponentId,
+    marker: PhantomData<T>,
+}
+
+unsafe impl<T: Resource + FromWorld> SystemParamState for InitResMutState<T> {
+    fn init(world: &mut World, meta: &mut SystemMeta) -> Self {
+        world.init_resource::<T>();
+
+        let component_id = world.components.init_resource::<T>();
+
+        meta.access.add_write(component_id);
+
+        Self {
+            component_id,
+            marker: PhantomData,
+        }
+    }
+}
+
+impl<'w, 's, T: Resource + FromWorld> SystemParamFetch<'w, 's> for InitResMutState<T> {
+    type Item = InitResMut<'w, T>;
+
+    unsafe fn get_param(
+        &'s mut self,
+        meta: &SystemMeta,
+        world: &'w World,
+        change_tick: u32,
+    ) -> Self::Item {
+        let (ptr, ticks) = world
+            .resources
+            .get_with_ticks(self.component_id)
+            .unwrap_or_else(|| {
+                panic!(
+                    "Resource requested by system {} does not exist: {}.",
+                    meta.name(),
+                    std::any::type_name::<T>()
+                )
+            });
+
+        InitResMut {
+            value: unsafe { &mut *ptr.cast::<T>() },
+            ticks: unsafe { &mut *ticks },
+            last_change_tick: meta.last_change_tick,
+            change_tick,
+        }
+    }
+}
+
+impl<'w, T: Resource + FromWorld> SystemParam for InitResMut<'w, T> {
+    type Fetch = InitResMutState<T>;
+}
+
 #[doc(hidden)]
 pub struct OptionResState<T>(ResState<T>);
 

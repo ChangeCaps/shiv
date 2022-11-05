@@ -136,9 +136,10 @@ impl World {
     }
 
     #[inline]
-    pub fn init_resource<T: Resource + Default>(&mut self) {
+    pub fn init_resource<T: Resource + FromWorld>(&mut self) {
         if !self.contains_resource::<T>() {
-            self.insert_resource(T::default());
+            let resource = T::from_world(self);
+            self.insert_resource(resource);
         }
     }
 
