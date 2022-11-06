@@ -5,7 +5,6 @@ edition = "2021"
 description = "A simple transform system for shiv"
 repository = "https://github.com/ChangeCaps/shiv"
 license = "MIT OR Apache-2.0"
-readme = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
