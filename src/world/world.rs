@@ -192,6 +192,12 @@ impl World {
             )
         })
     }
+
+    #[inline]
+    pub fn resource_or_default<T: Resource + FromWorld>(&mut self) -> Mut<T> {
+        self.init_resource::<T>();
+        self.resource_mut()
+    }
 }
 
 impl World {
