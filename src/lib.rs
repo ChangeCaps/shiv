@@ -28,7 +28,7 @@ pub mod prelude {
     };
     pub use crate::storage::{Resource, SparseStorage};
     pub use crate::system::{
-        Commands, EntityCommands, InitRes, InitResMut, IntoPipeSystem, Res, ResMut,
+        Commands, EntityCommands, IntoPipeSystem, Res, ResInit, ResMut, ResMutInit,
     };
     pub use crate::world::{Component, Entity, EntityMut, EntityRef, FromWorld, World};
 }

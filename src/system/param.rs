@@ -362,14 +362,14 @@ impl<'w, T: Resource> SystemParam for ResMut<'w, T> {
     type Fetch = ResMutState<T>;
 }
 
-pub struct InitRes<'w, T> {
+pub struct ResInit<'w, T> {
     value: &'w T,
     ticks: &'w ChangeTicks,
     last_change_tick: u32,
     change_tick: u32,
 }
 
-impl<'w, T> InitRes<'w, T> {
+impl<'w, T> ResInit<'w, T> {
     #[inline]
     pub fn is_added(&self) -> bool {
         self.ticks.is_added(self.last_change_tick, self.change_tick)
@@ -387,7 +387,7 @@ impl<'w, T> InitRes<'w, T> {
     }
 }
 
-impl<'w, T> Deref for InitRes<'w, T> {
+impl<'w, T> Deref for ResInit<'w, T> {
     type Target = T;
 
     #[inline]
@@ -396,7 +396,7 @@ impl<'w, T> Deref for InitRes<'w, T> {
     }
 }
 
-impl<'w, T> AsRef<T> for InitRes<'w, T> {
+impl<'w, T> AsRef<T> for ResInit<'w, T> {
     #[inline]
     fn as_ref(&self) -> &T {
         self.value
@@ -404,12 +404,12 @@ impl<'w, T> AsRef<T> for InitRes<'w, T> {
 }
 
 #[doc(hidden)]
-pub struct InitResState<T> {
+pub struct ResInitState<T> {
     component_id: ComponentId,
     marker: PhantomData<T>,
 }
 
-unsafe impl<T: Resource + FromWorld> SystemParamState for InitResState<T> {
+unsafe impl<T: Resource + FromWorld> SystemParamState for ResInitState<T> {
     fn init(world: &mut World, meta: &mut SystemMeta) -> Self {
         world.init_resource::<T>();
 
@@ -431,8 +431,8 @@ unsafe impl<T: Resource + FromWorld> SystemParamState for InitResState<T> {
     }
 }
 
-impl<'w, 's, T: Resource + FromWorld> SystemParamFetch<'w, 's> for InitResState<T> {
-    type Item = InitRes<'w, T>;
+impl<'w, 's, T: Resource + FromWorld> SystemParamFetch<'w, 's> for ResInitState<T> {
+    type Item = ResInit<'w, T>;
 
     unsafe fn get_param(
         &'s mut self,
@@ -451,7 +451,7 @@ impl<'w, 's, T: Resource + FromWorld> SystemParamFetch<'w, 's> for InitResState<
                 )
             });
 
-        InitRes {
+        ResInit {
             value: unsafe { &*ptr.cast::<T>() },
             ticks: unsafe { &*ticks },
             last_change_tick: meta.last_change_tick,
@@ -460,20 +460,20 @@ impl<'w, 's, T: Resource + FromWorld> SystemParamFetch<'w, 's> for InitResState<
     }
 }
 
-impl<'w, T: Resource + FromWorld> SystemParam for InitRes<'w, T> {
-    type Fetch = InitResState<T>;
+impl<'w, T: Resource + FromWorld> SystemParam for ResInit<'w, T> {
+    type Fetch = ResInitState<T>;
 }
 
-unsafe impl<T: Resource + FromWorld> ReadOnlySystemParamFetch for InitResState<T> {}
+unsafe impl<T: Resource + FromWorld> ReadOnlySystemParamFetch for ResInitState<T> {}
 
-pub struct InitResMut<'w, T> {
+pub struct ResMutInit<'w, T> {
     value: &'w mut T,
     ticks: &'w mut ChangeTicks,
     last_change_tick: u32,
     change_tick: u32,
 }
 
-impl<'w, T> InitResMut<'w, T> {
+impl<'w, T> ResMutInit<'w, T> {
     #[inline]
     pub fn is_added(&self) -> bool {
         self.ticks.is_added(self.last_change_tick, self.change_tick)
@@ -491,7 +491,7 @@ impl<'w, T> InitResMut<'w, T> {
     }
 }
 
-impl<'w, T> Deref for InitResMut<'w, T> {
+impl<'w, T> Deref for ResMutInit<'w, T> {
     type Target = T;
 
     #[inline]
@@ -500,7 +500,7 @@ impl<'w, T> Deref for InitResMut<'w, T> {
     }
 }
 
-impl<'w, T> DerefMut for InitResMut<'w, T> {
+impl<'w, T> DerefMut for ResMutInit<'w, T> {
     #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.ticks.set_changed(self.change_tick);
@@ -508,12 +508,12 @@ impl<'w, T> DerefMut for InitResMut<'w, T> {
     }
 }
 
-pub struct InitResMutState<T> {
+pub struct ResMutInitState<T> {
     component_id: ComponentId,
     marker: PhantomData<T>,
 }
 
-unsafe impl<T: Resource + FromWorld> SystemParamState for InitResMutState<T> {
+unsafe impl<T: Resource + FromWorld> SystemParamState for ResMutInitState<T> {
     fn init(world: &mut World, meta: &mut SystemMeta) -> Self {
         world.init_resource::<T>();
 
@@ -535,8 +535,8 @@ unsafe impl<T: Resource + FromWorld> SystemParamState for InitResMutState<T> {
     }
 }
 
-impl<'w, 's, T: Resource + FromWorld> SystemParamFetch<'w, 's> for InitResMutState<T> {
-    type Item = InitResMut<'w, T>;
+impl<'w, 's, T: Resource + FromWorld> SystemParamFetch<'w, 's> for ResMutInitState<T> {
+    type Item = ResMutInit<'w, T>;
 
     unsafe fn get_param(
         &'s mut self,
@@ -555,7 +555,7 @@ impl<'w, 's, T: Resource + FromWorld> SystemParamFetch<'w, 's> for InitResMutSta
                 )
             });
 
-        InitResMut {
+        ResMutInit {
             value: unsafe { &mut *ptr.cast::<T>() },
             ticks: unsafe { &mut *ticks },
             last_change_tick: meta.last_change_tick,
@@ -564,8 +564,8 @@ impl<'w, 's, T: Resource + FromWorld> SystemParamFetch<'w, 's> for InitResMutSta
     }
 }
 
-impl<'w, T: Resource + FromWorld> SystemParam for InitResMut<'w, T> {
-    type Fetch = InitResMutState<T>;
+impl<'w, T: Resource + FromWorld> SystemParam for ResMutInit<'w, T> {
+    type Fetch = ResMutInitState<T>;
 }
 
 #[doc(hidden)]
