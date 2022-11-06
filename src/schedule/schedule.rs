@@ -7,7 +7,7 @@ use crate::{
 use crate::{self as termite, Event, Events};
 
 #[derive(StageLabel)]
-pub enum CoreStage {
+pub enum DefaultStage {
     First,
     Last,
 }
@@ -34,18 +34,21 @@ impl Schedule {
         }
     }
 
-    /// Creates a new schedule [`CoreStage`]s.
+    /// Creates a new schedule with [`DefaultStage`]s.
+    ///
+    /// [`DefaultStage::First`] is run before all other stages.
+    /// [`DefaultStage::Last`] is run after all other stages.
     #[inline]
     pub fn new() -> Self {
         let mut schedule = Self::empty();
 
         let task_pool = TaskPool::new().expect("Failed to create task pool");
-        schedule.add_stage(
-            CoreStage::First,
+        schedule.push_stage_internal(
+            DefaultStage::First,
             SystemStage::parallel_with_task_pool(task_pool.clone()),
         );
-        schedule.add_stage(
-            CoreStage::Last,
+        schedule.push_stage_internal(
+            DefaultStage::Last,
             SystemStage::parallel_with_task_pool(task_pool.clone()),
         );
 
@@ -79,15 +82,46 @@ impl Schedule {
         self
     }
 
-    /// Adds a new stage to the schedule just before [`CoreStage::Last`].
-    ///
-    /// If [`CoreStage::Last`] is not present, `stage` will be added at the end.
-    pub fn add_stage(&mut self, label: impl StageLabel, stage: impl Stage) -> &mut Self {
+    pub fn contains_stage(&self, label: impl StageLabel) -> bool {
+        self.stages.contains_key(&label.label())
+    }
+
+    fn push_stage_internal(&mut self, label: impl StageLabel, stage: impl Stage) -> &mut Self {
         let id = label.label();
 
         self.stages.insert(id, Box::new(stage));
+        self.stage_order.push(id);
 
-        if let Some(index) = self.stage_index(CoreStage::Last.label()) {
+        self
+    }
+
+    #[inline]
+    fn validate_add_stage(&self, label: impl StageLabel) {
+        let id = label.label();
+
+        if self.stages.contains_key(&id) {
+            panic!("Stage with label `{}` already exists", id);
+        }
+
+        if id == DefaultStage::First.label() || id == DefaultStage::Last.label() {
+            panic!(
+                "Stage with label `{}` is reserved and cannot be added manually. See `Schedule::new`.",
+                id
+            );
+        }
+    }
+
+    /// Adds a new stage to the schedule just before [`DefaultStage::Last`].
+    ///
+    /// If [`DefaultStage::Last`] is not present, `stage` will be added at the end.
+    pub fn add_stage(&mut self, label: impl StageLabel, stage: impl Stage) -> &mut Self {
+        let id = label.label();
+
+        self.validate_add_stage(id);
+
+        self.stages.insert(id, Box::new(stage));
+
+        if let Some(index) = self.get_stage_index(DefaultStage::Last.label()) {
             self.stage_order.insert(index, id);
         } else {
             self.stage_order.push(id);
@@ -97,8 +131,21 @@ impl Schedule {
     }
 
     #[inline]
-    fn stage_index(&self, label: StageLabelId) -> Option<usize> {
-        self.stage_order.iter().position(|id| *id == label)
+    fn get_stage_index(&self, label: impl StageLabel) -> Option<usize> {
+        let id = label.label();
+
+        self.stage_order.iter().position(|stage_id| stage_id == &id)
+    }
+
+    #[inline]
+    #[track_caller]
+    fn stage_index(&self, label: impl StageLabel) -> usize {
+        let id = label.label();
+        if let Some(index) = self.get_stage_index(id) {
+            index
+        } else {
+            panic!("Stage with label `{}` does not exist", id);
+        }
     }
 
     #[track_caller]
@@ -111,17 +158,13 @@ impl Schedule {
         let before = before.label();
         let label = label.label();
 
-        if before.label() == CoreStage::First.label() {
-            panic!("Cannot add stage before CoreStage::First");
+        self.validate_add_stage(label);
+
+        if before.label() == DefaultStage::First.label() {
+            panic!("Cannot add stage before `CoreStage::First`");
         }
 
-        let index = self.stage_index(before).unwrap_or_else(|| {
-            panic!(
-                "Stage {} does not exist. Cannot add stage {} before it.",
-                before, label
-            )
-        });
-
+        let index = self.stage_index(before);
         self.stages.insert(label, Box::new(stage));
         self.stage_order.insert(index, label);
 
@@ -138,17 +181,13 @@ impl Schedule {
         let after = after.label();
         let label = label.label();
 
-        if after.label() == CoreStage::Last.label() {
+        self.validate_add_stage(label);
+
+        if after.label() == DefaultStage::Last.label() {
             panic!("Cannot add stage after CoreStage::Last");
         }
 
-        let index = self.stage_index(after).unwrap_or_else(|| {
-            panic!(
-                "Stage {} does not exist. Cannot add stage {} after it.",
-                after, label
-            )
-        });
-
+        let index = self.stage_index(after);
         self.stages.insert(label, Box::new(stage));
         self.stage_order.insert(index + 1, label);
 
@@ -202,7 +241,7 @@ impl Schedule {
     }
 
     pub fn add_event<E: Event>(&mut self) {
-        if let Some(stage) = self.get_stage_mut::<SystemStage>(CoreStage::First) {
+        if let Some(stage) = self.get_stage_mut::<SystemStage>(DefaultStage::First) {
             stage.add_system(Events::<E>::update_system);
         }
     }
@@ -221,5 +260,50 @@ impl Schedule {
 impl Stage for Schedule {
     fn run(&mut self, world: &mut World) {
         self.run_once(world);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate as termite;
+    use crate::*;
+
+    #[derive(StageLabel)]
+    pub struct TestStage;
+
+    #[test]
+    fn default_stages() {
+        let schedule = Schedule::new();
+
+        assert!(schedule.contains_stage(DefaultStage::First));
+        assert!(schedule.contains_stage(DefaultStage::Last));
+    }
+
+    #[test]
+    #[should_panic]
+    fn reserved_first_stages() {
+        let mut schedule = Schedule::empty();
+        schedule.add_stage(DefaultStage::First, SystemStage::parallel());
+    }
+
+    #[test]
+    #[should_panic]
+    fn reserved_last_stages() {
+        let mut schedule = Schedule::new();
+        schedule.add_stage(DefaultStage::Last, SystemStage::parallel());
+    }
+
+    #[test]
+    #[should_panic]
+    fn before_first() {
+        let mut schedule = Schedule::new();
+        schedule.add_stage_before(DefaultStage::First, TestStage, SystemStage::parallel());
+    }
+
+    #[test]
+    #[should_panic]
+    fn after_last() {
+        let mut schedule = Schedule::new();
+        schedule.add_stage_after(DefaultStage::Last, TestStage, SystemStage::parallel());
     }
 }

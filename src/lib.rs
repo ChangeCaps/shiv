@@ -45,7 +45,6 @@ mod tests {
 
     fn despawn_system(mut commands: Commands, query: Query<Entity, With<i32>>) {
         for entity in query.iter() {
-            eprintln!("{}", entity);
             commands.entity(entity).despawn();
         }
     }
