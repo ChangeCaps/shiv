@@ -48,6 +48,15 @@ impl ResourceData {
     }
 
     #[inline]
+    pub fn into_ptr(self) -> *mut dyn Resource {
+        let data = self.data;
+
+        std::mem::forget(self);
+
+        data
+    }
+
+    #[inline]
     pub fn change_ticks(&self) -> &UnsafeCell<ChangeTicks> {
         &self.change_ticks
     }
@@ -90,7 +99,7 @@ impl Resources {
 
     #[inline]
     pub fn remove(&mut self, id: ComponentId) -> Option<*mut dyn Resource> {
-        Some(self.resources.remove(id.index())?.as_ptr())
+        Some(self.resources.remove(id.index())?.into_ptr())
     }
 
     #[inline]
