@@ -45,12 +45,12 @@ pub enum DefaultStage {
 /// }
 ///
 /// // define a system
-/// fn foo_system(mut resource: InitResMut<u32>) {
+/// fn foo_system(mut resource: ResMutInit<u32>) {
 ///     *resource = 42;
 /// }
 ///
 /// // define another system
-/// fn bar_system(mut resource: InitResMut<u32>) {
+/// fn bar_system(mut resource: ResMutInit<u32>) {
 ///     *resource *= 10;
 /// }
 ///
