@@ -3,8 +3,13 @@ use downcast_rs::{impl_downcast, Downcast};
 use hyena::TaskPool;
 
 use crate::{
-    hash_map::HashMap, IntoSystemDescriptor, ParallelExecutor, SequentialExecutor, SystemContainer,
-    SystemExecutor, SystemLabelId, World, WorldId,
+    hash_map::HashMap,
+    schedule::SystemLabelId,
+    world::{World, WorldId},
+};
+
+use super::{
+    IntoSystemDescriptor, ParallelExecutor, SequentialExecutor, SystemContainer, SystemExecutor,
 };
 
 pub trait Stage: Downcast + Send + Sync {
@@ -239,8 +244,13 @@ impl Stage for SystemStage {
 mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
-    use crate as termite;
-    use crate::*;
+    use crate as shiv;
+    use crate::query::Query;
+    use crate::schedule::{IntoSystemDescriptor, SystemLabel};
+    use crate::system::ResMut;
+    use crate::world::World;
+
+    use super::{Stage, SystemStage};
 
     #[derive(SystemLabel)]
     enum TestSystem {

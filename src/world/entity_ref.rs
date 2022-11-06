@@ -1,6 +1,11 @@
 use std::mem::MaybeUninit;
 
-use crate::{Component, Entity, Mut, Storage, StorageSet, Ticks, World};
+use crate::{
+    change_detection::{Mut, Ticks},
+    storage::StorageSet,
+};
+
+use super::{Component, Entity, Storage, World};
 
 #[derive(Clone, Copy)]
 pub struct EntityRef<'w> {

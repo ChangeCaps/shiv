@@ -1,6 +1,8 @@
 use std::cell::UnsafeCell;
 
-use crate::{ChangeTicks, ComponentId, SparseArray};
+use crate::{change_detection::ChangeTicks, world::ComponentId};
+
+use super::SparseArray;
 
 pub trait Resource: Send + Sync + 'static {}
 

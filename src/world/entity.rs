@@ -175,6 +175,11 @@ impl Entities {
     }
 
     #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.len == 0
+    }
+
+    #[inline]
     pub fn reserve(&self) -> Entity {
         let n = self.free_cursor.fetch_sub(1, Ordering::Relaxed);
         if n > 0 {
@@ -313,6 +318,8 @@ impl Entities {
         }
     }
 
+    /// # Safety
+    /// - `self.meta` must contain `index`
     #[inline]
     pub unsafe fn get_unchecked(&self, index: usize) -> Entity {
         let generation = unsafe { self.meta.get_unchecked(index).generation };

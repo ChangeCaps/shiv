@@ -1,3 +1,5 @@
+//! Provides the [`World`] type, which stores all data in the ECS.
+
 mod component;
 mod entity;
 mod entity_ref;

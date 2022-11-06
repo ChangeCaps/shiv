@@ -1,9 +1,13 @@
 use std::sync::atomic::{AtomicU32, Ordering};
 
 use crate::{
-    Component, ComponentId, ComponentStorage, Components, Entities, Entity, EntityMut, EntityRef,
-    Mut, QueryState, ReadOnlyWorldQuery, Resource, Resources, Storage, Ticks, WorldQuery,
+    change_detection::{Mut, Ticks},
+    query::{QueryState, ReadOnlyWorldQuery, WorldQuery},
+    storage::{ComponentStorage, Resource, Resources},
+    world::Entities,
 };
+
+use super::{Component, ComponentId, Components, Entity, EntityMut, EntityRef, Storage};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct WorldId(usize);
@@ -73,11 +77,6 @@ impl World {
     #[inline]
     pub fn flush(&mut self) {
         self.entities.flush();
-    }
-
-    #[inline]
-    pub fn len(&self) -> u32 {
-        self.entities.len()
     }
 
     #[inline]
@@ -290,7 +289,11 @@ impl World {
 
 #[cfg(test)]
 mod tests {
-    use crate::*;
+    use crate::{
+        query::{With, Without},
+        storage::SparseStorage,
+        world::{Component, Entity, World},
+    };
 
     impl Component for i32 {
         type Storage = SparseStorage;

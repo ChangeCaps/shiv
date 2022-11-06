@@ -1,12 +1,17 @@
 use std::ops::{Deref, DerefMut, Mul, MulAssign};
 
 use glam::{Mat3, Mat4, Quat, Vec3};
-use termite::{Component, Entity};
+use shiv::world::{Component, Entity};
 
+/// The parent of an entity.
 #[repr(transparent)]
 #[derive(Component, Debug, Clone, Copy, PartialEq)]
 pub struct Parent(pub Entity);
 
+/// The children of an entity.
+///
+/// This should **almost never** be modified directly.
+/// Instead, use the [`Parent`] component instead.
 #[derive(Component, Debug, Clone, Default, PartialEq)]
 pub struct Children {
     pub children: Vec<Entity>,
@@ -26,6 +31,10 @@ impl DerefMut for Children {
     }
 }
 
+/// The local transform of an entity.
+///
+/// This is the transform relative to the [`Parent`].
+/// If there is no [`Parent`], this it is relative to the origin.
 #[repr(C)]
 #[derive(Component, Clone, Copy, Debug, PartialEq)]
 pub struct Transform {
@@ -81,11 +90,13 @@ impl Transform {
         }
     }
 
+    /// Computes the matrix representation of this transform.
     #[inline]
     pub fn compute_matrix(&self) -> Mat4 {
         Mat4::from_scale_rotation_translation(self.scale, self.rotation, self.translation)
     }
 
+    /// Computes the inverse of this transform.
     #[inline]
     pub fn invserse(&self) -> Self {
         let inv_scale = self.scale.recip();
@@ -139,6 +150,8 @@ impl MulAssign for Transform {
 }
 
 /// A global transform representing an affine transformation.
+///
+/// This is the transform relative to the origin.
 #[repr(C)]
 #[derive(Component, Clone, Copy, Debug, PartialEq)]
 pub struct GlobalTransform {

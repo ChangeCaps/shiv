@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use crate::{Component, Entity, World};
+use crate::world::{Component, Entity, World};
 
 #[derive(Default)]
 pub struct CommandQueue {

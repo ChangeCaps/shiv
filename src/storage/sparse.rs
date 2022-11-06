@@ -1,6 +1,11 @@
 use std::cell::UnsafeCell;
 
-use crate::{ChangeTicks, Column, ComponentDescriptor, Entity, EntityIdSet, StorageSet};
+use crate::{
+    change_detection::ChangeTicks,
+    world::{ComponentDescriptor, Entity, EntityIdSet},
+};
+
+use super::{Column, StorageSet};
 
 #[repr(transparent)]
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

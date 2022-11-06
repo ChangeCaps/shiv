@@ -2,29 +2,46 @@
 
 //! A simple modern Entity Component System (ECS).
 
-mod change_ticks;
-mod event;
-mod hash_map;
-mod query;
-mod schedule;
-mod storage;
-mod system;
-mod world;
+pub mod change_detection;
+pub mod event;
+pub mod hash_map;
+pub mod query;
+pub mod schedule;
+pub mod storage;
+pub mod system;
+pub mod world;
 
-pub use change_ticks::*;
-pub use event::*;
-pub use query::*;
-pub use schedule::*;
-pub use storage::*;
-pub use system::*;
-pub use world::*;
+pub mod tasks {
+    //! A re-export of [`hyena`].
+
+    pub use hyena::*;
+}
+
+pub mod prelude {
+    //! `use termite::prelude::*;` imports the most commonly used types and traits.
+
+    pub use crate::change_detection::Mut;
+    pub use crate::event::{Event, EventId, EventReader, EventWriter, Events};
+    pub use crate::query::{Added, Changed, Query, QueryIter, QueryState, With, Without};
+    pub use crate::schedule::{
+        DefaultStage, IntoSystemDescriptor, Schedule, Stage, StageLabel, SystemLabel, SystemStage,
+    };
+    pub use crate::storage::{Resource, SparseStorage};
+    pub use crate::system::{
+        Commands, EntityCommands, InitRes, InitResMut, IntoPipeSystem, Res, ResMut,
+    };
+    pub use crate::world::{Component, Entity, EntityMut, EntityRef, FromWorld, World};
+}
 
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
 
-    use crate as termite;
-    use crate::*;
+    use crate as shiv;
+    use crate::query::{Added, Changed, Query, With};
+    use crate::schedule::{Schedule, StageLabel, SystemStage};
+    use crate::system::{Commands, ResMut};
+    use crate::world::{Entity, World};
 
     #[derive(StageLabel)]
     enum TestStage {

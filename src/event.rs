@@ -7,8 +7,11 @@ use std::{
 };
 
 use crate::{
-    Local, LocalState, ReadOnlySystemParamFetch, Res, ResMut, ResMutState, ResState, SystemMeta,
-    SystemParam, SystemParamFetch, SystemParamState, World,
+    system::{
+        Local, LocalState, ReadOnlySystemParamFetch, Res, ResMut, ResMutState, ResState,
+        SystemMeta, SystemParam, SystemParamFetch, SystemParamState,
+    },
+    world::World,
 };
 
 pub trait Event: Send + Sync + 'static {}

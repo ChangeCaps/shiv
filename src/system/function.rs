@@ -3,10 +3,9 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
-use crate::{
-    System, SystemMeta, SystemParam, SystemParamFetch, SystemParamItem, SystemParamState, World,
-    WorldId,
-};
+use crate::world::{World, WorldId};
+
+use super::{System, SystemMeta, SystemParam, SystemParamFetch, SystemParamItem, SystemParamState};
 
 pub trait IntoSystem<In, Out, Params>: Sized {
     type System: System<In = In, Out = Out>;
@@ -208,7 +207,11 @@ impl_system_param_function!(A, B, C, D, E, F, G, H, I, J, K, L);
 
 #[cfg(test)]
 mod tests {
-    use crate::*;
+    use crate::{
+        query::Query,
+        system::{IntoSystem, System},
+        world::World,
+    };
 
     fn test_system(query: Query<&i32>) {
         for item in query.iter() {

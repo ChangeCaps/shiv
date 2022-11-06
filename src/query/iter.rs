@@ -1,4 +1,6 @@
-use crate::{Entities, EntityIdSet, QueryItem, QueryState, ReadOnlyWorldQuery, World, WorldQuery};
+use crate::world::{Entities, EntityIdSet, World};
+
+use super::{QueryItem, QueryState, ReadOnlyWorldQuery, WorldQuery};
 
 #[allow(dead_code)]
 pub struct QueryIter<'w, 's, Q: WorldQuery, F: ReadOnlyWorldQuery = ()> {

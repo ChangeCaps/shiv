@@ -1,6 +1,8 @@
 use downcast_rs::{impl_downcast, Downcast};
 
-use crate::{ParallelExecutor, SystemContainer, World};
+use crate::world::World;
+
+use super::{ParallelExecutor, SystemContainer};
 
 pub trait SystemExecutor: Downcast + Send + Sync {
     #[inline]

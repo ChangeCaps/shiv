@@ -1,9 +1,16 @@
+//! Types that detect changes.
+
 use std::ops::{Deref, DerefMut};
 
+/// Threshold for detecting changes.
+///
+/// Change ticks wrap around at this value.
 pub const CHECK_TICK_THRESHOLD: u32 = 518_400_000;
 
+/// The maximum allowed age of a change tick.
 pub const MAX_CHANGE_AGE: u32 = u32::MAX - (2 * CHECK_TICK_THRESHOLD - 1);
 
+/// Change detection for a single component or resource.
 pub struct Ticks<'w> {
     pub(crate) ticks: &'w mut ChangeTicks,
     pub(crate) last_change_tick: u32,
@@ -11,23 +18,27 @@ pub struct Ticks<'w> {
 }
 
 impl<'w> Ticks<'w> {
+    /// Marks `self` as changed.
     #[inline]
     pub fn set_changed(&mut self) {
         self.ticks.set_changed(self.change_tick);
     }
 
+    /// Returns `true` if `self` has changed.
     #[inline]
     pub fn is_changed(&self) -> bool {
         self.ticks
             .is_changed(self.last_change_tick, self.change_tick)
     }
 
+    /// Returns `true` if `self` was just added.
     #[inline]
     pub fn is_added(&self) -> bool {
         self.ticks.is_added(self.last_change_tick, self.change_tick)
     }
 }
 
+/// A wrapper that marks the inner type as changed with `T` is mutated.
 pub struct Mut<'w, T> {
     pub(crate) value: &'w mut T,
     pub(crate) ticks: Ticks<'w>,
@@ -47,14 +58,28 @@ impl<'w, T> Mut<'w, T> {
         *self.value = value;
     }
 
+    /// Marks `self` as changed.
+    #[inline]
+    pub fn set_changed(&mut self) {
+        self.ticks.set_changed();
+    }
+
+    /// Gets a reference to the inner value.
     #[inline]
     pub fn get(&self) -> &T {
         self.value
     }
 
+    /// Gets a mutable reference to the inner value and marks `self` as changed.
     #[inline]
     pub fn get_mut(&mut self) -> &mut T {
-        self.ticks.set_changed();
+        self.set_changed();
+        self.value
+    }
+
+    /// Gets a mutable reference to the inner value without marking `self` as changed.
+    #[inline]
+    pub fn get_mut_unchecked(&mut self) -> &mut T {
         self.value
     }
 }
@@ -75,6 +100,7 @@ impl<'w, T> DerefMut for Mut<'w, T> {
     }
 }
 
+/// Change detection ticks for a single component or resource.
 #[derive(Clone, Copy, Debug)]
 pub struct ChangeTicks {
     added: u32,
@@ -82,6 +108,7 @@ pub struct ChangeTicks {
 }
 
 impl ChangeTicks {
+    /// Returns true if `self` was added after `last_change_tick`.
     #[inline]
     pub fn is_added(&self, last_change_tick: u32, change_tick: u32) -> bool {
         let ticks_since_insert = change_tick.wrapping_sub(self.added).min(MAX_CHANGE_AGE);
@@ -92,6 +119,7 @@ impl ChangeTicks {
         ticks_since_system > ticks_since_insert
     }
 
+    /// Returns true if `self` was changed after `last_change_tick`.
     #[inline]
     pub fn is_changed(&self, last_change_tick: u32, change_tick: u32) -> bool {
         let ticks_since_change = change_tick.wrapping_sub(self.changed).min(MAX_CHANGE_AGE);
@@ -102,6 +130,7 @@ impl ChangeTicks {
         ticks_since_system > ticks_since_change
     }
 
+    /// Creates a new [`ChangeTicks`].
     #[inline]
     pub fn new(change_tick: u32) -> Self {
         Self {
@@ -110,11 +139,13 @@ impl ChangeTicks {
         }
     }
 
+    /// Marks `self` as changed.
     #[inline]
     pub fn set_changed(&mut self, change_tick: u32) {
         self.changed = change_tick;
     }
 
+    /// Checks ticks, ensuring they don't exceed [`MAX_CHANGE_AGE`].
     #[inline]
     pub fn check_ticks(&mut self, change_tick: u32) {
         Self::check_tick(&mut self.added, change_tick);

@@ -1,9 +1,12 @@
 use std::{any::type_name, marker::PhantomData};
 
 use crate::{
-    Component, ComponentId, Entity, FilteredAccess, ReadOnlyWorldQuery, Storage, StorageSet, World,
-    WorldQuery,
+    storage::StorageSet,
+    system::FilteredAccess,
+    world::{Component, ComponentId, Entity, Storage, World},
 };
+
+use super::{ReadOnlyWorldQuery, WorldQuery};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct With<T> {

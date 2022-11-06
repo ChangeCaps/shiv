@@ -1,9 +1,11 @@
 use std::cell::UnsafeCell;
 
 use crate::{
-    ChangeTicks, ComponentDescriptor, ComponentId, ComponentInfo, Entity, EntityIdSet, SparseArray,
-    SparseStorage,
+    change_detection::ChangeTicks,
+    world::{ComponentDescriptor, ComponentId, ComponentInfo, Entity, EntityIdSet},
 };
+
+use super::{SparseArray, SparseStorage};
 
 pub struct StorageSets<T> {
     storage_sets: SparseArray<T>,

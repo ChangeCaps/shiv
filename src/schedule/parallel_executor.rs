@@ -3,7 +3,12 @@ use event_listener::Event;
 use fixedbitset::FixedBitSet;
 use hyena::{Scope, TaskPool};
 
-use crate::{Access, ComponentId, SystemContainer, SystemExecutor, World};
+use crate::{
+    system::Access,
+    world::{ComponentId, World},
+};
+
+use super::{SystemContainer, SystemExecutor};
 
 #[derive(Debug)]
 struct ParallelSystemMeta {

@@ -1,9 +1,11 @@
 use std::borrow::Cow;
 
 use crate::{
-    Access, ComponentId, SystemParam, SystemParamFetch, SystemParamItem, SystemParamState, World,
-    WorldId, MAX_CHANGE_AGE,
+    change_detection::MAX_CHANGE_AGE,
+    world::{ComponentId, World, WorldId},
 };
+
+use super::{Access, SystemParam, SystemParamFetch, SystemParamItem, SystemParamState};
 
 pub type BoxedSystem<In, Out> = Box<dyn System<In = In, Out = Out>>;
 

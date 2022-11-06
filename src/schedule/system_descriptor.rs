@@ -1,4 +1,6 @@
-use crate::{BoxedSystem, IntoSystem, System, SystemLabel, SystemLabelId};
+use crate::system::{BoxedSystem, IntoSystem, System};
+
+use super::{SystemLabel, SystemLabelId};
 
 pub struct SystemDescriptor {
     pub system: BoxedSystem<(), ()>,

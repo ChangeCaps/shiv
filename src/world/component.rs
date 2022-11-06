@@ -1,10 +1,11 @@
 use std::{alloc::Layout, any::TypeId};
 
 use crate::{
-    hash_map::HashMap, ComponentStorage, Resource, SparseStorage, StorageSet, StorageSets,
+    hash_map::HashMap,
+    storage::{ComponentStorage, Resource, SparseStorage, StorageSet, StorageSets},
 };
 
-pub use termite_macro::Component;
+pub use shiv_macro::Component;
 
 pub trait Component: Send + Sync + 'static {
     type Storage: Storage;

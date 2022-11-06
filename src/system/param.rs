@@ -5,9 +5,13 @@ use std::{
 };
 
 use crate::{
-    Access, ChangeTicks, CommandQueue, Commands, ComponentId, FromWorld, Query, QueryState,
-    ReadOnlyWorldQuery, Resource, SystemMeta, World, WorldQuery,
+    change_detection::ChangeTicks,
+    query::{Query, QueryState, ReadOnlyWorldQuery, WorldQuery},
+    storage::Resource,
+    world::{ComponentId, FromWorld, World},
 };
+
+use super::{Access, CommandQueue, Commands, SystemMeta};
 
 pub unsafe trait ReadOnlySystemParamFetch: for<'w, 's> SystemParamFetch<'w, 's> {}
 
@@ -173,6 +177,10 @@ impl<'w, T> Res<'w, T> {
     #[inline]
     pub fn into_inner(self) -> &'w T {
         self.value
+    }
+
+    pub fn ticks(&self) -> &ChangeTicks {
+        self.ticks
     }
 }
 

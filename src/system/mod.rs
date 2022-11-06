@@ -14,7 +14,11 @@ pub use system_piping::*;
 
 #[cfg(test)]
 mod tests {
-    use crate::*;
+    use crate::{
+        query::Query,
+        system::{IntoSystem, Res, ResMut, System},
+        world::World,
+    };
 
     #[test]
     #[should_panic]

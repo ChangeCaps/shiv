@@ -1,4 +1,6 @@
-use crate::{IntoSystem, System, SystemMeta, World};
+use crate::world::World;
+
+use super::{IntoSystem, System, SystemMeta};
 
 pub struct PipeSystem<A, B> {
     system_a: A,
@@ -89,7 +91,10 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::*;
+    use crate::{
+        system::{In, IntoPipeSystem, System},
+        world::World,
+    };
 
     #[test]
     fn pipe_system() {

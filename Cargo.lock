@@ -279,6 +279,37 @@ dependencies = [
 ]
 
 [[package]]
+name = "shiv"
+version = "0.1.0-alpha"
+dependencies = [
+ "ahash 0.8.1",
+ "async-channel",
+ "downcast-rs",
+ "event-listener",
+ "fixedbitset",
+ "hashbrown",
+ "hyena",
+ "shiv-macro",
+]
+
+[[package]]
+name = "shiv-macro"
+version = "0.1.0-alpha"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "shiv-transform"
+version = "0.1.0-alpha"
+dependencies = [
+ "glam",
+ "shiv",
+]
+
+[[package]]
 name = "slab"
 version = "0.4.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -296,37 +327,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "unicode-ident",
-]
-
-[[package]]
-name = "termite"
-version = "0.1.0-alpha"
-dependencies = [
- "ahash 0.8.1",
- "async-channel",
- "downcast-rs",
- "event-listener",
- "fixedbitset",
- "hashbrown",
- "hyena",
- "termite-macro",
-]
-
-[[package]]
-name = "termite-macro"
-version = "0.1.0-alpha"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
-name = "termite-transform"
-version = "0.1.0-alpha"
-dependencies = [
- "glam",
- "termite",
 ]
 
 [[package]]

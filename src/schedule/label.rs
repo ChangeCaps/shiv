@@ -1,6 +1,6 @@
 use std::any::TypeId;
 
-pub use termite_macro::{StageLabel, SystemLabel};
+pub use shiv_macro::{StageLabel, SystemLabel};
 
 macro_rules! define_label {
     (
@@ -27,6 +27,7 @@ macro_rules! define_label {
             }
         }
 
+        $(#[$id_meta])*
         #[derive(Clone, Copy, Debug)]
         pub struct $id {
             type_id: TypeId,

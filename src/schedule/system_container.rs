@@ -1,4 +1,6 @@
-use crate::{BoxedSystem, System, SystemDescriptor, SystemLabelId, SystemMeta};
+use crate::system::{BoxedSystem, System, SystemMeta};
+
+use super::{SystemDescriptor, SystemLabelId};
 
 pub struct SystemContainer {
     system: BoxedSystem<(), ()>,

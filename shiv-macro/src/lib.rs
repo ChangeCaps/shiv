@@ -9,8 +9,8 @@ pub fn derive_component(input: proc_macro::TokenStream) -> proc_macro::TokenStre
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
     let expanded = quote! {
-        impl #impl_generics termite::Component for #name #ty_generics #where_clause {
-            type Storage = termite::SparseStorage;
+        impl #impl_generics shiv::world::Component for #name #ty_generics #where_clause {
+            type Storage = shiv::storage::SparseStorage;
         }
     };
 
@@ -30,9 +30,9 @@ macro_rules! impl_label {
 
         quote! {
             #[automatically_derived]
-            impl #impl_generics termite::#ident for #name #ty_generics #where_clause {
+            impl #impl_generics shiv::schedule::#ident for #name #ty_generics #where_clause {
                 #[inline]
-                fn label(self) -> termite::#id {
+                fn label(self) -> shiv::schedule::#id {
                     #label_impl
                 }
             }
@@ -64,7 +64,7 @@ fn label_fn_impl(input: &DeriveInput, id: &Ident) -> TokenStream {
             let name = input.ident.to_string();
 
             quote! {
-                termite::#id::from_raw_parts::<Self>(#name, 0u32)
+                shiv::schedule::#id::from_raw_parts::<Self>(#name, 0u32)
             }
         }
         Data::Enum(ref data) => {
@@ -82,7 +82,7 @@ fn label_fn_impl(input: &DeriveInput, id: &Ident) -> TokenStream {
                 let i = i as u32;
 
                 quote! {
-                    Self::#variant_ident => termite::#id::from_raw_parts::<Self>(#name, #i)
+                    Self::#variant_ident => shiv::schedule::#id::from_raw_parts::<Self>(#name, #i)
                 }
             });
 

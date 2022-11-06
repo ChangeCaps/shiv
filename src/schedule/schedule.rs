@@ -1,17 +1,85 @@
 use hyena::TaskPool;
 
+use crate as shiv;
 use crate::{
-    hash_map::HashMap, IntoSystemDescriptor, Stage, StageLabel, StageLabelId, SystemStage, World,
+    event::{Event, Events},
+    hash_map::HashMap,
+    world::World,
 };
 
-use crate::{self as termite, Event, Events};
+use super::{IntoSystemDescriptor, Stage, StageLabel, StageLabelId, SystemStage};
 
+/// [`Stage`]s that are automatically added by [`Schedule::new`].
+///
+/// These stages are reserved for use by the [`Schedule`],
+/// and can therefore not be added to the [`Schedule`] manually.
 #[derive(StageLabel)]
 pub enum DefaultStage {
+    /// Always runs before all other stages.
+    ///
+    /// [`Stage`]s cannot be added before this stage.
     First,
+    /// Always runs after all other stages.
+    ///
+    /// [`Stage`]s cannot be added after this stage.
     Last,
 }
 
+/// A schedule is a collection of [`Stage`]s that are executed in order.
+///
+/// # Examples
+/// ```rust
+/// use shiv::prelude::*;
+///  
+/// // define a stage label
+/// #[derive(StageLabel)]
+/// pub enum MyStage {
+///     Foo,
+/// }
+///
+/// // define some system labels
+/// #[derive(SystemLabel)]
+/// pub enum MySystem {
+///     Foo,
+///     Bar
+/// }
+///
+/// // define a system
+/// fn foo_system(mut resource: InitResMut<u32>) {
+///     *resource = 42;
+/// }
+///
+/// // define another system
+/// fn bar_system(mut resource: InitResMut<u32>) {
+///     *resource *= 10;
+/// }
+///
+/// // create a schedule with our stage
+/// let mut schedule = Schedule::new()
+///     .with_stage(MyStage::Foo, SystemStage::parallel());
+///
+/// // add our systems to the stage
+/// schedule.add_system_to_stage(
+///     MyStage::Foo,
+///     foo_system.label(MySystem::Foo)
+/// );
+///
+/// // systems can be added in any order
+/// // system order is determined by their labels
+/// schedule.add_system_to_stage(
+///     MyStage::Foo,
+///     bar_system.label(MySystem::Bar).after(MySystem::Foo)
+/// );
+///
+/// // create a world
+/// let mut world = World::new();
+///
+/// // run our schedule on out world
+/// schedule.run_once(&mut world);
+///
+/// // get the resource from our world
+/// assert_eq!(*world.resource::<u32>(), 420);
+/// ```
 #[derive(Debug)]
 pub struct Schedule {
     stages: HashMap<StageLabelId, Box<dyn Stage>>,
@@ -26,6 +94,7 @@ impl Default for Schedule {
 }
 
 impl Schedule {
+    /// Creates a new empty schedule.
     #[inline]
     pub fn empty() -> Self {
         Self {
@@ -55,11 +124,24 @@ impl Schedule {
         schedule
     }
 
+    /// Adds a new stage to the schedule just before [`DefaultStage::Last`].
+    ///
+    /// If [`DefaultStage::Last`] is not present, `stage` will be added at the end.
+    ///
+    /// # Panics
+    /// - A stage with the same `label` already exists.
+    /// - `label` is reserved i.e., `label` is [`DefaultStage::First`] or [`DefaultStage::Last`].
     pub fn with_stage(mut self, label: impl StageLabel, stage: impl Stage) -> Self {
         self.add_stage(label, stage);
         self
     }
 
+    /// Adds a new stage to the schedule just before `before`.
+    ///
+    /// # Panics
+    /// - A stage with the same `label` already exists.
+    /// - `label` is reserved i.e., `label` is [`DefaultStage::First`] or [`DefaultStage::Last`].
+    /// - `before` is [`DefaultStage::First`].
     #[track_caller]
     pub fn with_stage_before(
         mut self,
@@ -71,6 +153,12 @@ impl Schedule {
         self
     }
 
+    /// Adds a new stage to the schedule just after `after`.
+    ///
+    /// # Panics
+    /// - A stage with the same `label` already exists.
+    /// - `label` is reserved i.e., `label` is [`DefaultStage::First`] or [`DefaultStage::Last`].
+    /// - `after` is [`DefaultStage::Last`].
     #[track_caller]
     pub fn with_stage_after(
         mut self,
@@ -82,6 +170,7 @@ impl Schedule {
         self
     }
 
+    /// Returns true if the schedule contains a stage with the given `label`.
     pub fn contains_stage(&self, label: impl StageLabel) -> bool {
         self.stages.contains_key(&label.label())
     }
@@ -114,6 +203,10 @@ impl Schedule {
     /// Adds a new stage to the schedule just before [`DefaultStage::Last`].
     ///
     /// If [`DefaultStage::Last`] is not present, `stage` will be added at the end.
+    ///
+    /// # Panics
+    /// - A stage with the same `label` already exists.
+    /// - `label` is reserved i.e., `label` is [`DefaultStage::First`] or [`DefaultStage::Last`].
     pub fn add_stage(&mut self, label: impl StageLabel, stage: impl Stage) -> &mut Self {
         let id = label.label();
 
@@ -148,6 +241,12 @@ impl Schedule {
         }
     }
 
+    /// Adds a new stage to the schedule just before `before`.
+    ///
+    /// # Panics
+    /// - A stage with the same `label` already exists.
+    /// - `label` is reserved i.e., `label` is [`DefaultStage::First`] or [`DefaultStage::Last`].
+    /// - `before` is [`DefaultStage::First`].
     #[track_caller]
     pub fn add_stage_before(
         &mut self,
@@ -171,6 +270,12 @@ impl Schedule {
         self
     }
 
+    /// Adds a new stage to the schedule just after `after`.
+    ///
+    /// # Panics
+    /// - A stage with the same `label` already exists.
+    /// - `label` is reserved i.e., `label` is [`DefaultStage::First`] or [`DefaultStage::Last`].
+    /// - `after` is [`DefaultStage::Last`].
     #[track_caller]
     pub fn add_stage_after(
         &mut self,
@@ -194,40 +299,63 @@ impl Schedule {
         self
     }
 
+    /// Gets the stage with the given `label` and type `T`.
+    ///
+    /// Returns `None` if the stage does not exist or if the stage is not of type `T`.
     pub fn get_stage<T: Stage>(&self, label: impl StageLabel) -> Option<&T> {
         self.stages.get(&label.label())?.downcast_ref()
     }
 
+    /// Gets the stage with the given `label` and type `T`.
+    ///
+    /// Returns `None` if the stage does not exist or if the stage is not of type `T`.
     pub fn get_stage_mut<T: Stage>(&mut self, label: impl StageLabel) -> Option<&mut T> {
         self.stages.get_mut(&label.label())?.downcast_mut()
     }
 
+    /// Gets the stage with the given `label` and type `T`.
+    ///
+    /// # Panics
+    /// - The stage does not exist.
+    /// - The stage is not of type `T`.
     #[track_caller]
     pub fn stage<T: Stage>(&self, label: impl StageLabel) -> &T {
         let id = label.label();
-        let stage = self
-            .stages
-            .get(&id)
-            .unwrap_or_else(|| panic!("Stage {} does not exist.", id));
+        let stage = if let Some(stage) = self.stages.get(&id) {
+            stage
+        } else {
+            panic!("Stage with label `{}` does not exist", id);
+        };
 
         stage
             .downcast_ref()
             .expect("Stage is not the correct type.")
     }
 
+    /// Gets the stage with the given `label` and type `T`.
+    ///
+    /// # Panics
+    /// - The stage does not exist.
+    /// - The stage is not of type `T`.
     #[track_caller]
     pub fn stage_mut<T: Stage>(&mut self, label: impl StageLabel) -> &mut T {
         let id = label.label();
-        let stage = self
-            .stages
-            .get_mut(&id)
-            .unwrap_or_else(|| panic!("Stage {} does not exist.", id));
+        let stage = if let Some(stage) = self.stages.get_mut(&id) {
+            stage
+        } else {
+            panic!("Stage with label `{}` does not exist", id);
+        };
 
         stage
             .downcast_mut()
             .expect("Stage is not the correct type.")
     }
 
+    /// Adds a system to the stage with the given `label`.
+    ///
+    /// # Panics
+    /// - The stage does not exist.
+    /// - The stage is not of type [`SystemStage`].
     #[track_caller]
     pub fn add_system_to_stage<Params>(
         &mut self,
@@ -240,12 +368,17 @@ impl Schedule {
         self
     }
 
+    /// Adds [`Events::update_system`] to [`DefaultStage::First`].
+    /// If the stage does not exist, this function does nothing.
     pub fn add_event<E: Event>(&mut self) {
         if let Some(stage) = self.get_stage_mut::<SystemStage>(DefaultStage::First) {
             stage.add_system(Events::<E>::update_system);
         }
     }
 
+    /// Runs the schedule once.
+    ///
+    /// **Note:** This function will most likely panic if run with a two different worlds.
     pub fn run_once(&mut self, world: &mut World) {
         for stage_id in &self.stage_order {
             let stage = self.stages.get_mut(stage_id).unwrap();
@@ -265,8 +398,8 @@ impl Stage for Schedule {
 
 #[cfg(test)]
 mod tests {
-    use crate as termite;
-    use crate::*;
+    use crate as shiv;
+    use crate::schedule::{DefaultStage, Schedule, StageLabel, SystemStage};
 
     #[derive(StageLabel)]
     pub struct TestStage;

@@ -1,7 +1,9 @@
 use crate::{
-    ComponentId, Entity, EntityIdSet, FilteredAccess, QueryItem, QueryIter, ReadOnlyQueryItem,
-    ReadOnlyWorldQuery, World, WorldId, WorldQuery,
+    system::FilteredAccess,
+    world::{ComponentId, Entity, EntityIdSet, World, WorldId},
 };
+
+use super::{QueryItem, QueryIter, ReadOnlyQueryItem, ReadOnlyWorldQuery, WorldQuery};
 
 pub struct QueryState<Q: WorldQuery, F: ReadOnlyWorldQuery> {
     pub(crate) world_id: WorldId,

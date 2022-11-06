@@ -1,6 +1,8 @@
 use std::{alloc::Layout, cell::UnsafeCell};
 
-use crate::{BlobVec, ChangeTicks, ComponentDescriptor};
+use crate::{change_detection::ChangeTicks, world::ComponentDescriptor};
+
+use super::BlobVec;
 
 #[derive(Debug)]
 pub struct Column {

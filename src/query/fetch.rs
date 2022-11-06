@@ -1,7 +1,10 @@
 use std::any::type_name;
 
 use crate::{
-    Component, ComponentId, Entity, FilteredAccess, Mut, Storage, StorageSet, Ticks, World,
+    change_detection::{Mut, Ticks},
+    storage::StorageSet,
+    system::FilteredAccess,
+    world::{Component, ComponentId, Entity, Storage, World},
 };
 
 pub unsafe trait WorldQuery {
