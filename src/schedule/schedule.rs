@@ -85,12 +85,13 @@ impl Schedule {
     pub fn add_stage(&mut self, label: impl StageLabel, stage: impl Stage) -> &mut Self {
         let id = label.label();
 
-        let index = self
-            .stage_index(CoreStage::Last.label())
-            .unwrap_or(self.stage_order.len() - 1);
-
         self.stages.insert(id, Box::new(stage));
-        self.stage_order.insert(index - 1, id);
+
+        if let Some(index) = self.stage_index(CoreStage::Last.label()) {
+            self.stage_order.insert(index, id);
+        } else {
+            self.stage_order.push(id);
+        }
 
         self
     }
@@ -109,6 +110,10 @@ impl Schedule {
     ) -> &mut Self {
         let before = before.label();
         let label = label.label();
+
+        if before.label() == CoreStage::First.label() {
+            panic!("Cannot add stage before CoreStage::First");
+        }
 
         let index = self.stage_index(before).unwrap_or_else(|| {
             panic!(
@@ -132,6 +137,10 @@ impl Schedule {
     ) -> &mut Self {
         let after = after.label();
         let label = label.label();
+
+        if after.label() == CoreStage::Last.label() {
+            panic!("Cannot add stage after CoreStage::Last");
+        }
 
         let index = self.stage_index(after).unwrap_or_else(|| {
             panic!(

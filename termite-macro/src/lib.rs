@@ -64,7 +64,7 @@ fn label_fn_impl(input: &DeriveInput, id: &Ident) -> TokenStream {
             let name = input.ident.to_string();
 
             quote! {
-                termite::#id::from_raw_parts(#name, 0u32)
+                termite::#id::from_raw_parts::<Self>(#name, 0u32)
             }
         }
         Data::Enum(ref data) => {
@@ -82,7 +82,7 @@ fn label_fn_impl(input: &DeriveInput, id: &Ident) -> TokenStream {
                 let i = i as u32;
 
                 quote! {
-                    Self::#variant_ident => termite::#id::from_raw_parts(#name, #i)
+                    Self::#variant_ident => termite::#id::from_raw_parts::<Self>(#name, #i)
                 }
             });
 

@@ -1,4 +1,7 @@
-use std::marker::PhantomData;
+use std::{
+    marker::PhantomData,
+    ops::{Deref, DerefMut},
+};
 
 use crate::{
     System, SystemMeta, SystemParam, SystemParamFetch, SystemParamItem, SystemParamState, World,
@@ -11,7 +14,19 @@ pub trait IntoSystem<In, Out, Params>: Sized {
     fn into_system(self) -> Self::System;
 }
 
-pub struct FunctionSystem<In, Out, Param, F>
+impl<In, Out, S> IntoSystem<In, Out, ()> for S
+where
+    S: System<In = In, Out = Out>,
+{
+    type System = S;
+
+    #[inline]
+    fn into_system(self) -> Self::System {
+        self
+    }
+}
+
+pub struct FunctionSystem<In, Out, Param, Marker, F>
 where
     Param: SystemParam,
 {
@@ -19,17 +34,18 @@ where
     param_state: Option<Param::Fetch>,
     meta: SystemMeta,
     world_id: Option<WorldId>,
-    _marker: PhantomData<fn() -> (In, Out)>,
+    _marker: PhantomData<fn() -> (In, Out, Marker)>,
 }
 
-impl<In, Out, Params, F> IntoSystem<In, Out, Params> for F
+impl<In, Out, Params, Marker, F> IntoSystem<In, Out, (Params, Marker)> for F
 where
     In: 'static,
     Out: 'static,
     Params: SystemParam + 'static,
-    F: SystemParamFunction<In, Out, Params> + Send + Sync + 'static,
+    Marker: 'static,
+    F: SystemParamFunction<In, Out, Params, Marker> + Send + Sync + 'static,
 {
-    type System = FunctionSystem<In, Out, Params, F>;
+    type System = FunctionSystem<In, Out, Params, Marker, F>;
 
     #[inline]
     fn into_system(self) -> Self::System {
@@ -43,12 +59,13 @@ where
     }
 }
 
-impl<In, Out, Param, F> System for FunctionSystem<In, Out, Param, F>
+impl<In, Out, Param, Marker, F> System for FunctionSystem<In, Out, Param, Marker, F>
 where
     In: 'static,
     Out: 'static,
     Param: SystemParam + 'static,
-    F: SystemParamFunction<In, Out, Param> + Send + Sync + 'static,
+    Marker: 'static,
+    F: SystemParamFunction<In, Out, Param, Marker> + Send + Sync + 'static,
 {
     type In = In;
     type Out = Out;
@@ -100,14 +117,56 @@ where
     }
 }
 
-pub trait SystemParamFunction<In, Out, Params: SystemParam>: Send + Sync + 'static {
+#[doc(hidden)]
+pub struct InputMarker;
+
+pub struct In<T> {
+    value: T,
+}
+
+impl<T> In<T> {
+    #[inline]
+    pub fn new(value: T) -> Self {
+        Self { value }
+    }
+
+    #[inline]
+    pub fn into_inner(self) -> T {
+        self.value
+    }
+}
+
+impl<T> From<T> for In<T> {
+    #[inline]
+    fn from(value: T) -> Self {
+        Self::new(value)
+    }
+}
+
+impl<T> Deref for In<T> {
+    type Target = T;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        &self.value
+    }
+}
+
+impl<T> DerefMut for In<T> {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.value
+    }
+}
+
+pub trait SystemParamFunction<In, Out, Params: SystemParam, Marker>: Send + Sync + 'static {
     fn run(&mut self, input: In, item: SystemParamItem<Params>) -> Out;
 }
 
 macro_rules! impl_system_param_function {
     (@ $($param:ident),*) => {
         #[allow(non_snake_case)]
-        impl<Out, Func, $($param: SystemParam),*> SystemParamFunction<(), Out, ($($param,)*)> for Func
+        impl<Out, Func, $($param: SystemParam),*> SystemParamFunction<(), Out, ($($param,)*), ()> for Func
         where
             Out: 'static,
             Func: Send + Sync + 'static,
@@ -118,6 +177,21 @@ macro_rules! impl_system_param_function {
             fn run(&mut self, _input: (), item: SystemParamItem<($($param,)*)>) -> Out {
                 let ($($param,)*) = item;
                 (self)($($param),*)
+            }
+        }
+
+        #[allow(non_snake_case)]
+        impl<Input, Out, Func, $($param: SystemParam),*> SystemParamFunction<Input, Out, ($($param,)*), InputMarker> for Func
+        where
+            Out: 'static,
+            Func: Send + Sync + 'static,
+            Func: FnMut(In<Input>, $($param),*) -> Out,
+            Func: FnMut(In<Input>, $(SystemParamItem<$param>),*) -> Out,
+        {
+            #[inline]
+            fn run(&mut self, input: Input, item: SystemParamItem<($($param,)*)>) -> Out {
+                let ($($param,)*) = item;
+                (self)(In::new(input), $($param),*)
             }
         }
     };

@@ -1,3 +1,5 @@
+use std::any::TypeId;
+
 pub use termite_macro::{StageLabel, SystemLabel};
 
 macro_rules! define_label {
@@ -27,21 +29,26 @@ macro_rules! define_label {
 
         #[derive(Clone, Copy, Debug)]
         pub struct $id {
+            type_id: TypeId,
             name: &'static str,
             variant: u32,
         }
 
         impl $id {
             #[inline]
-            pub const fn from_raw_parts(name: &'static str, variant: u32) -> Self {
-                Self { name, variant }
+            pub fn from_raw_parts<T: 'static>(name: &'static str, variant: u32) -> Self {
+                Self {
+                    type_id: TypeId::of::<T>(),
+                    name,
+                    variant
+                }
             }
         }
 
         impl PartialEq for $id {
             #[inline]
             fn eq(&self, other: &Self) -> bool {
-                self.variant == other.variant
+                self.type_id == other.type_id && self.variant == other.variant
             }
         }
 
@@ -50,6 +57,7 @@ macro_rules! define_label {
         impl ::std::hash::Hash for $id {
             #[inline]
             fn hash<H: ::std::hash::Hasher>(&self, state: &mut H) {
+                self.type_id.hash(state);
                 self.variant.hash(state);
             }
         }

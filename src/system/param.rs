@@ -202,6 +202,13 @@ unsafe impl<T: Resource> SystemParamState for ResState<T> {
     fn init(world: &mut World, meta: &mut SystemMeta) -> Self {
         let component_id = world.components.init_resource::<T>();
 
+        assert!(
+            !meta.access.has_write(component_id),
+            "Res<{}> in system {} conflicts with previous access in this query. Shared access cannot coexist with exclusive access.", 
+            std::any::type_name::<T>(),
+            meta.name(),
+        );
+
         meta.access.add_read(component_id);
 
         Self {
@@ -298,6 +305,13 @@ unsafe impl<T: Resource> SystemParamState for ResMutState<T> {
     fn init(world: &mut World, meta: &mut SystemMeta) -> Self {
         let component_id = world.components.init_resource::<T>();
 
+        assert!(
+            !meta.access.has_read(component_id),
+            "ResMut<{}> in system {} conflicts with previous system parameters. Mutable resource access must be unique.",
+            std::any::type_name::<T>(),
+            meta.name(),
+        );
+
         meta.access.add_write(component_id);
 
         Self {
@@ -392,6 +406,13 @@ unsafe impl<T: Resource + FromWorld> SystemParamState for InitResState<T> {
         world.init_resource::<T>();
 
         let component_id = world.components.init_resource::<T>();
+
+        assert!(
+            !meta.access.has_write(component_id),
+            "Res<{}> in system {} conflicts with previous access in this query. Shared access cannot coexist with exclusive access.", 
+            std::any::type_name::<T>(),
+            meta.name(),
+        );
 
         meta.access.add_read(component_id);
 
@@ -489,6 +510,13 @@ unsafe impl<T: Resource + FromWorld> SystemParamState for InitResMutState<T> {
         world.init_resource::<T>();
 
         let component_id = world.components.init_resource::<T>();
+
+        assert!(
+            !meta.access.has_read(component_id),
+            "ResMut<{}> in system {} conflicts with previous system parameters. Mutable resource access must be unique.",
+            std::any::type_name::<T>(),
+            meta.name(),
+        );
 
         meta.access.add_write(component_id);
 
