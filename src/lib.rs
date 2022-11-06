@@ -18,7 +18,7 @@ pub mod tasks {
 }
 
 pub mod prelude {
-    //! `use termite::prelude::*;` imports the most commonly used types and traits.
+    //! `use shiv::prelude::*;` imports the most commonly used types and traits.
 
     pub use crate::change_detection::Mut;
     pub use crate::event::{Event, EventId, EventReader, EventWriter, Events};
