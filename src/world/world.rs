@@ -21,11 +21,11 @@ impl WorldId {
 }
 
 pub trait FromWorld: Sized {
-    fn from_world(world: &World) -> Self;
+    fn from_world(world: &mut World) -> Self;
 }
 
 impl<T: Default> FromWorld for T {
-    fn from_world(_: &World) -> Self {
+    fn from_world(_: &mut World) -> Self {
         Self::default()
     }
 }
