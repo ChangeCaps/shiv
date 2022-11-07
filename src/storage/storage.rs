@@ -47,7 +47,7 @@ where
     #[inline]
     pub fn initialize(&mut self, info: &ComponentInfo) {
         if !self.storage_sets.contains(info.id().index()) {
-            let set = StorageSet::new(*info.descriptor(), info.id().index());
+            let set = StorageSet::new(*info.descriptor(), 0);
             self.storage_sets.insert(info.id().index(), set);
         }
     }

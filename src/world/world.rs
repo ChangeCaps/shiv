@@ -352,6 +352,24 @@ mod tests {
     }
 
     #[test]
+    fn zst() {
+        use crate as shiv;
+
+        #[derive(Component, Debug, PartialEq)]
+        struct Zst;
+
+        let mut world = World::new();
+        let a = world.spawn().insert(Zst).insert(2i32).entity();
+        let b = world.spawn().insert(2i32).insert(Zst).entity();
+
+        let query = world.query::<(Entity, &Zst, &i32)>();
+        let mut iter = query.iter(&world);
+
+        assert_eq!(iter.next(), Some((a, &Zst, &2)));
+        assert_eq!(iter.next(), Some((b, &Zst, &2)));
+    }
+
+    #[test]
     fn multiple_entities() {
         let mut world = World::new();
         let entity1 = world.spawn().insert(2i32).entity();

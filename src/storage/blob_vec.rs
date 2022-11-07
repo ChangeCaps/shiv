@@ -143,11 +143,15 @@ impl BlobVec {
     pub fn reserve_exact(&mut self, additional: usize) {
         let available = self.capacity - self.len;
 
-        if available < additional && self.item_layout.size() != 0 {
+        if available < additional {
             let increment = additional - available;
 
-            // SAFETY: self.item_layout is is not zero-sized.
-            unsafe { self.grow_exact(increment) }
+            if self.item_layout.size() != 0 {
+                // SAFETY: self.item_layout is is not zero-sized.
+                unsafe { self.grow_exact(increment) }
+            } else {
+                self.capacity += increment;
+            }
         }
     }
 
