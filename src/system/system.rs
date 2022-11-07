@@ -81,7 +81,7 @@ impl<Param: SystemParam + 'static> SystemState<Param> {
 
     #[inline]
     fn validate_world(&self, world: &World) {
-        if self.matches_world(world) {
+        if !self.matches_world(world) {
             panic!("System state was created for a different world");
         }
     }
