@@ -81,10 +81,11 @@ impl BlobVec {
     /// - the memory at `index` must be initialized matching `self.item_layout`
     #[inline]
     pub unsafe fn replace_unchecked(&mut self, index: usize, value: *mut u8) {
+        let ptr = unsafe { self.get_unchecked(index) };
+
         let len = self.len;
         self.len = 0;
 
-        let ptr = unsafe { self.get_unchecked(index) };
         if let Some(drop) = self.drop {
             unsafe { drop(ptr) };
         }

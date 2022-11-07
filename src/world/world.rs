@@ -319,6 +319,19 @@ mod tests {
     }
 
     #[test]
+    fn replace_component() {
+        let mut world = World::new();
+
+        let entity = world.spawn().insert(2i32).entity();
+
+        assert_eq!(*world.entity(entity).get::<i32>().unwrap(), 2);
+
+        world.entity_mut(entity).insert(3i32);
+
+        assert_eq!(*world.entity(entity).get::<i32>().unwrap(), 3);
+    }
+
+    #[test]
     fn despawn() {
         let mut world = World::new();
         let entity = world.spawn().insert(2i32).insert(false).entity();
