@@ -1,4 +1,4 @@
-use std::mem::MaybeUninit;
+use std::mem::{self, MaybeUninit};
 
 use crate::{
     change_detection::{Mut, Ticks},
@@ -109,6 +109,8 @@ impl<'w> EntityMut<'w> {
                 change_tick,
             )
         };
+
+        mem::forget(component);
 
         self
     }
