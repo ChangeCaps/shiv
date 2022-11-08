@@ -2,7 +2,7 @@ use std::mem::{self, MaybeUninit};
 
 use crate::{
     change_detection::{Mut, Ticks},
-    storage::StorageSet,
+    storage::ComponentStorage,
 };
 
 use super::{Component, Entity, Storage, World};

@@ -3,7 +3,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use crate::{
     change_detection::{Mut, Ticks},
     query::{QueryState, ReadOnlyWorldQuery, WorldQuery},
-    storage::{ComponentStorage, Resource, Resources},
+    storage::{Resource, Resources, Storages},
     world::Entities,
 };
 
@@ -33,7 +33,7 @@ impl<T: Default> FromWorld for T {
 pub struct World {
     id: WorldId,
     pub(crate) entities: Entities,
-    pub(crate) storage: ComponentStorage,
+    pub(crate) storage: Storages,
     pub(crate) components: Components,
     pub(crate) resources: Resources,
     pub(crate) change_tick: AtomicU32,
@@ -49,7 +49,7 @@ impl Default for World {
         Self {
             id: WorldId::new(),
             entities: Entities::default(),
-            storage: ComponentStorage::default(),
+            storage: Storages::default(),
             components: Components::default(),
             resources: Resources::default(),
             change_tick: AtomicU32::new(1),
@@ -297,16 +297,16 @@ impl World {
 mod tests {
     use crate::{
         query::{With, Without},
-        storage::SparseStorage,
+        storage::DenseStorage,
         world::{Component, Entity, World},
     };
 
     impl Component for i32 {
-        type Storage = SparseStorage;
+        type Storage = DenseStorage;
     }
 
     impl Component for bool {
-        type Storage = SparseStorage;
+        type Storage = DenseStorage;
     }
 
     #[test]

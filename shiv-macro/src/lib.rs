@@ -10,7 +10,7 @@ pub fn derive_component(input: proc_macro::TokenStream) -> proc_macro::TokenStre
 
     let expanded = quote! {
         impl #impl_generics shiv::world::Component for #name #ty_generics #where_clause {
-            type Storage = shiv::storage::SparseStorage;
+            type Storage = shiv::storage::DenseStorage;
         }
     };
 

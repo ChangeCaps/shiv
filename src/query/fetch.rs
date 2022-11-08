@@ -2,7 +2,7 @@ use std::any::type_name;
 
 use crate::{
     change_detection::{Mut, Ticks},
-    storage::StorageSet,
+    storage::ComponentStorage,
     system::FilteredAccess,
     world::{Component, ComponentId, Entity, Storage, World},
 };

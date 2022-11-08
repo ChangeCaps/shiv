@@ -1,7 +1,7 @@
 use std::{any::type_name, marker::PhantomData};
 
 use crate::{
-    storage::StorageSet,
+    storage::ComponentStorage,
     system::FilteredAccess,
     world::{Component, ComponentId, Entity, Storage, World},
 };

@@ -26,7 +26,7 @@ pub mod prelude {
     pub use crate::schedule::{
         DefaultStage, IntoSystemDescriptor, Schedule, Stage, StageLabel, SystemLabel, SystemStage,
     };
-    pub use crate::storage::{Resource, SparseStorage};
+    pub use crate::storage::{DenseStorage, Resource};
     pub use crate::system::{
         Commands, EntityCommands, IntoPipeSystem, Res, ResInit, ResMut, ResMutInit,
     };

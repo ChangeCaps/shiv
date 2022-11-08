@@ -5,13 +5,13 @@ use crate::{
     world::{ComponentDescriptor, ComponentId, ComponentInfo, Entity, EntityIdSet},
 };
 
-use super::{SparseArray, SparseStorage};
+use super::{DenseStorage, SparseArray};
 
-pub struct StorageSets<T> {
+pub struct StorageSet<T> {
     storage_sets: SparseArray<T>,
 }
 
-impl<T> Default for StorageSets<T> {
+impl<T> Default for StorageSet<T> {
     #[inline]
     fn default() -> Self {
         Self {
@@ -20,9 +20,9 @@ impl<T> Default for StorageSets<T> {
     }
 }
 
-impl<T> StorageSets<T>
+impl<T> StorageSet<T>
 where
-    T: StorageSet,
+    T: ComponentStorage,
 {
     #[inline]
     pub fn get(&self, id: ComponentId) -> Option<&T> {
@@ -47,7 +47,7 @@ where
     #[inline]
     pub fn initialize(&mut self, info: &ComponentInfo) {
         if !self.storage_sets.contains(info.id().index()) {
-            let set = StorageSet::new(*info.descriptor(), 0);
+            let set = ComponentStorage::new(*info.descriptor(), 0);
             self.storage_sets.insert(info.id().index(), set);
         }
     }
@@ -68,18 +68,18 @@ where
 }
 
 #[derive(Default)]
-pub struct ComponentStorage {
-    sparse: StorageSets<SparseStorage>,
+pub struct Storages {
+    sparse: StorageSet<DenseStorage>,
 }
 
-impl ComponentStorage {
+impl Storages {
     #[inline]
-    pub fn sparse(&self) -> &StorageSets<SparseStorage> {
+    pub fn sparse(&self) -> &StorageSet<DenseStorage> {
         &self.sparse
     }
 
     #[inline]
-    pub fn sparse_mut(&mut self) -> &mut StorageSets<SparseStorage> {
+    pub fn sparse_mut(&mut self) -> &mut StorageSet<DenseStorage> {
         &mut self.sparse
     }
 
@@ -114,7 +114,7 @@ impl ComponentStorage {
     }
 }
 
-pub trait StorageSet: Send + Sync + 'static {
+pub trait ComponentStorage: Send + Sync + 'static {
     /// Create a new storage for the given component type `T`.
     fn new(desc: ComponentDescriptor, capacity: usize) -> Self;
 
@@ -127,14 +127,14 @@ pub trait StorageSet: Send + Sync + 'static {
     ///
     /// # Safety
     /// - The storage must be able to store components of type `T`.
-    unsafe fn insert(&mut self, entity: Entity, component: *mut u8, change_ticks: u32);
+    unsafe fn insert(&mut self, entity: Entity, data: *mut u8, change_ticks: u32);
 
     /// Removes a component for the given entity.
     ///
     /// # Safety
     /// - `entity` must be contained in the storage.
     /// - `component` must be a valid pointer.
-    unsafe fn remove_unchecked(&mut self, entity: Entity, component: *mut u8);
+    unsafe fn remove_unchecked(&mut self, entity: Entity, data: *mut u8);
 
     /// Removes a component for the given entity.
     fn remove_and_drop(&mut self, entity: Entity);

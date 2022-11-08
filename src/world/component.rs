@@ -2,7 +2,7 @@ use std::{alloc::Layout, any::TypeId};
 
 use crate::{
     hash_map::HashMap,
-    storage::{ComponentStorage, Resource, SparseStorage, StorageSet, StorageSets},
+    storage::{ComponentStorage, DenseStorage, Resource, StorageSet, Storages},
 };
 
 pub use shiv_macro::Component;
@@ -11,19 +11,19 @@ pub trait Component: Send + Sync + 'static {
     type Storage: Storage;
 }
 
-pub trait Storage: StorageSet + Sized {
-    fn get(storage: &ComponentStorage) -> &StorageSets<Self>;
-    fn get_mut(storage: &mut ComponentStorage) -> &mut StorageSets<Self>;
+pub trait Storage: ComponentStorage + Sized {
+    fn get(storage: &Storages) -> &StorageSet<Self>;
+    fn get_mut(storage: &mut Storages) -> &mut StorageSet<Self>;
 }
 
-impl Storage for SparseStorage {
+impl Storage for DenseStorage {
     #[inline]
-    fn get(storage: &ComponentStorage) -> &StorageSets<Self> {
+    fn get(storage: &Storages) -> &StorageSet<Self> {
         storage.sparse()
     }
 
     #[inline]
-    fn get_mut(storage: &mut ComponentStorage) -> &mut StorageSets<Self> {
+    fn get_mut(storage: &mut Storages) -> &mut StorageSet<Self> {
         storage.sparse_mut()
     }
 }
