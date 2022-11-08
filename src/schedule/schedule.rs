@@ -378,7 +378,7 @@ impl Schedule {
 
     /// Runs the schedule once.
     ///
-    /// **Note:** This function will most likely panic if run with a two different worlds.
+    /// **Note:** This function will most likely panic if run with two different worlds.
     pub fn run_once(&mut self, world: &mut World) {
         for stage_id in &self.stage_order {
             let stage = self.stages.get_mut(stage_id).unwrap();

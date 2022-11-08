@@ -133,6 +133,7 @@ impl<Q: WorldQuery, F: ReadOnlyWorldQuery> QueryState<Q, F> {
     }
 
     #[inline]
+    #[allow(unused_variables)]
     pub fn debug_validate_world(&self, world: &World) {
         #[cfg(debug_assertions)]
         self.validate_world(world);

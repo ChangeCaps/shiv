@@ -119,8 +119,7 @@ pub trait System: Send + Sync + 'static {
 
     /// # Safety
     /// - `world` must be the same world that was used to [`System::init`] this system.
-    /// - This system must not run at the same time as another system that has conflicting [`Access`].
-    ///   Use [`System::meta`] to guarantee this.
+    /// - This doesn't check borrow rules, so it's up to the caller to that access is correct.
     unsafe fn run(&mut self, input: Self::In, world: &World) -> Self::Out;
 
     fn apply(&mut self, _world: &mut World) {}
