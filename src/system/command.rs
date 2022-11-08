@@ -1,6 +1,9 @@
 use std::marker::PhantomData;
 
-use crate::world::{Component, Entity, World};
+use crate::{
+    storage::Resource,
+    world::{Component, Entity, FromWorld, World},
+};
 
 #[derive(Default)]
 pub struct CommandQueue {
@@ -39,6 +42,11 @@ impl<'w, 's> Commands<'w, 's> {
     }
 
     #[inline]
+    pub fn add(&mut self, command: impl Command) {
+        self.queue.queue.push(Box::new(command));
+    }
+
+    #[inline]
     pub fn spawn<'a>(&'a mut self) -> EntityCommands<'w, 's, 'a> {
         let entity = self.world.reserve_entity();
         EntityCommands::new(self, entity)
@@ -71,8 +79,21 @@ impl<'w, 's> Commands<'w, 's> {
     }
 
     #[inline]
-    pub fn add(&mut self, command: impl Command) {
-        self.queue.queue.push(Box::new(command));
+    pub fn insert_resource<T: Resource>(&mut self, resource: T) {
+        self.add(InsertResource { resource });
+    }
+
+    pub fn init_resource<T: Resource + FromWorld>(&mut self) {
+        self.add(InitResource {
+            marker: PhantomData::<T>,
+        });
+    }
+
+    #[inline]
+    pub fn remove_resource<T: Resource>(&mut self) {
+        self.add(RemoveResource {
+            marker: PhantomData::<T>,
+        });
     }
 }
 
@@ -159,5 +180,35 @@ pub struct GetOrSpawn {
 impl Command for GetOrSpawn {
     fn apply(self: Box<Self>, world: &mut World) {
         world.get_or_spawn(self.entity);
+    }
+}
+
+pub struct InsertResource<T> {
+    resource: T,
+}
+
+impl<T: Resource> Command for InsertResource<T> {
+    fn apply(self: Box<Self>, world: &mut World) {
+        world.insert_resource(self.resource);
+    }
+}
+
+pub struct RemoveResource<T> {
+    marker: PhantomData<T>,
+}
+
+impl<T: Resource> Command for RemoveResource<T> {
+    fn apply(self: Box<Self>, world: &mut World) {
+        world.remove_resource::<T>();
+    }
+}
+
+pub struct InitResource<T> {
+    marker: PhantomData<T>,
+}
+
+impl<T: Resource + FromWorld> Command for InitResource<T> {
+    fn apply(self: Box<Self>, world: &mut World) {
+        world.init_resource::<T>();
     }
 }
