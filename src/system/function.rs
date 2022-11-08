@@ -3,7 +3,10 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
-use crate::world::{World, WorldId};
+use crate::{
+    change_detection::MAX_CHANGE_AGE,
+    world::{World, WorldId},
+};
 
 use super::{System, SystemMeta, SystemParam, SystemParamFetch, SystemParamItem, SystemParamState};
 
@@ -82,7 +85,7 @@ where
     #[inline]
     fn init(&mut self, world: &mut World) {
         self.world_id = Some(world.id());
-        self.meta.last_change_tick = world.change_tick();
+        self.meta.last_change_tick = world.change_tick().wrapping_sub(MAX_CHANGE_AGE);
         self.param_state = Some(<Param::Fetch as SystemParamState>::init(
             world,
             &mut self.meta,

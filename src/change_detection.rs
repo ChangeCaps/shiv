@@ -11,6 +11,7 @@ pub const CHECK_TICK_THRESHOLD: u32 = 518_400_000;
 pub const MAX_CHANGE_AGE: u32 = u32::MAX - (2 * CHECK_TICK_THRESHOLD - 1);
 
 /// Change detection for a single component or resource.
+#[derive(Debug)]
 pub struct Ticks<'w> {
     pub(crate) ticks: &'w mut ChangeTicks,
     pub(crate) last_change_tick: u32,
