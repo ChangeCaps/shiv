@@ -571,6 +571,8 @@ impl<'w, T: Resource + FromWorld> SystemParam for ResMutInit<'w, T> {
 #[doc(hidden)]
 pub struct OptionResState<T>(ResState<T>);
 
+unsafe impl<T: Resource> ReadOnlySystemParamFetch for OptionResState<T> {}
+
 unsafe impl<T: Resource> SystemParamState for OptionResState<T> {
     #[inline]
     fn init(world: &mut World, meta: &mut SystemMeta) -> Self {
