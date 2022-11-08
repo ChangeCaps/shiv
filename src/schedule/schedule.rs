@@ -7,7 +7,10 @@ use crate::{
     world::World,
 };
 
-use super::{IntoSystemDescriptor, Stage, StageLabel, StageLabelId, SystemStage};
+use super::{
+    IntoRunCriteria, IntoSystemDescriptor, RunCriteria, ShouldRun, Stage, StageLabel, StageLabelId,
+    SystemStage,
+};
 
 /// [`Stage`]s that are automatically added by [`Schedule::new`].
 ///
@@ -84,6 +87,7 @@ pub enum DefaultStage {
 pub struct Schedule {
     stages: HashMap<StageLabelId, Box<dyn Stage>>,
     stage_order: Vec<StageLabelId>,
+    run_criteria: RunCriteria,
 }
 
 impl Default for Schedule {
@@ -100,6 +104,7 @@ impl Schedule {
         Self {
             stages: HashMap::default(),
             stage_order: Vec::new(),
+            run_criteria: RunCriteria::default(),
         }
     }
 
@@ -173,6 +178,21 @@ impl Schedule {
     /// Returns true if the schedule contains a stage with the given `label`.
     pub fn contains_stage(&self, label: impl StageLabel) -> bool {
         self.stages.contains_key(&label.label())
+    }
+
+    /// Sets the run criteria for the schedule.
+    pub fn set_run_criteria<Marker>(
+        &mut self,
+        run_criteria: impl IntoRunCriteria<Marker>,
+    ) -> &mut Self {
+        self.run_criteria = run_criteria.into_run_criteria();
+        self
+    }
+
+    /// Sets the run criteria for the schedule.
+    pub fn with_run_criteria<Marker>(mut self, run_criteria: impl IntoRunCriteria<Marker>) -> Self {
+        self.set_run_criteria(run_criteria);
+        self
     }
 
     fn push_stage_internal(&mut self, label: impl StageLabel, stage: impl Stage) -> &mut Self {
@@ -380,6 +400,11 @@ impl Schedule {
     ///
     /// **Note:** This function will most likely panic if run with two different worlds.
     pub fn run_once(&mut self, world: &mut World) {
+        match self.run_criteria.should_run(world) {
+            ShouldRun::Yes => {}
+            ShouldRun::No => return,
+        }
+
         for stage_id in &self.stage_order {
             let stage = self.stages.get_mut(stage_id).unwrap();
             stage.run(world);

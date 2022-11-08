@@ -1,6 +1,6 @@
 [package]
 name = "shiv-app"
-version = "0.1.0-alpha2"
+version = "0.1.0-alpha3"
 edition = "2021"
 description = "A simple framework for building apps with shiv"
 repository = "https://github.com/ChangeCaps/shiv"
@@ -10,4 +10,4 @@ readme = "README.md"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-shiv = { path = "..", version = "0.1.0-alpha2" }
+shiv = { path = "..", version = "0.1.0-alpha3" }
