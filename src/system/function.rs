@@ -51,7 +51,7 @@ where
         FunctionSystem {
             func: self,
             param_state: None,
-            meta: SystemMeta::new::<Params>(),
+            meta: SystemMeta::new::<Self>(),
             world_id: None,
             _marker: PhantomData,
         }

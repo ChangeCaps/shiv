@@ -138,7 +138,7 @@ impl ParallelExecutor {
 
             if meta.access.is_compatible(&self.current_access) {
                 self.queued.set(index, false);
-                self.running.set(index, true);
+                self.running.insert(index);
                 self.current_access.extend(&meta.access);
                 meta.start.notify(1);
             }
@@ -173,6 +173,7 @@ impl SystemExecutor for ParallelExecutor {
                 dependencies_remaining: 0,
                 access: meta.access.clone(),
             };
+
             self.system_meta.push(system_meta);
         }
 

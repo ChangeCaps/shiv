@@ -194,14 +194,12 @@ impl SystemStage {
         }
 
         for (index, system) in systems.iter_mut().enumerate() {
-            let dependencies = graph
-                .get_mut(&index)
-                .unwrap()
-                .drain()
-                .map(|index| sorted[index])
-                .collect::<Vec<_>>();
+            system.dependencies_mut().clear();
 
-            *system.dependencies_mut() = dependencies;
+            for &dependency in graph.get(&index).unwrap() {
+                let dependency = sorted.iter().position(|&i| i == dependency).unwrap();
+                system.dependencies_mut().push(dependency);
+            }
         }
 
         let mut temp = systems.drain(..).map(Some).collect::<Vec<_>>();
