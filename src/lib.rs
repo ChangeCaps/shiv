@@ -39,8 +39,8 @@ mod tests {
 
     use crate as shiv;
     use crate::query::{Added, Changed, Query, With};
-    use crate::schedule::{Schedule, StageLabel, SystemStage};
-    use crate::system::{Commands, ResMut};
+    use crate::schedule::{IntoSystemDescriptor, Schedule, ShouldRun, StageLabel, SystemStage};
+    use crate::system::{Commands, Local, ResMut};
     use crate::world::{Entity, World};
 
     #[derive(StageLabel)]
@@ -146,6 +146,25 @@ mod tests {
         schedule.add_system_to_stage(TestStage::B, detect_added_system);
         schedule.add_system_to_stage(TestStage::B, detect_changed_system);
 
+        schedule.run_once(&mut world);
+    }
+
+    #[test]
+    fn run_criteria() {
+        fn only_once(mut has_run: Local<bool>) {
+            if *has_run {
+                panic!("System ran twice");
+            }
+
+            *has_run = true;
+        }
+
+        let mut world = World::new();
+        let mut schedule = default_schedule();
+
+        schedule.add_system_to_stage(TestStage::A, only_once.with_run_criteria(ShouldRun::once));
+
+        schedule.run_once(&mut world);
         schedule.run_once(&mut world);
     }
 }

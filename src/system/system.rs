@@ -143,3 +143,11 @@ pub trait System: Send + Sync + 'static {
         meta.last_change_tick = last_change_tick;
     }
 }
+
+impl<In: 'static, Out: 'static> std::fmt::Debug for dyn System<In = In, Out = Out> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("System")
+            .field("name", &self.meta().name)
+            .finish()
+    }
+}

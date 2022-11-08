@@ -1,12 +1,13 @@
 use crate::system::{BoxedSystem, System, SystemMeta};
 
-use super::{SystemDescriptor, SystemLabelId};
+use super::{RunCriteriaContainer, SystemDescriptor, SystemLabelId};
 
 pub struct SystemContainer {
     system: BoxedSystem<(), ()>,
     labels: Vec<SystemLabelId>,
     before: Vec<SystemLabelId>,
     after: Vec<SystemLabelId>,
+    run_criteria: RunCriteriaContainer,
     dependencies: Vec<usize>,
 }
 
@@ -18,6 +19,7 @@ impl SystemContainer {
             labels: descriptor.labels,
             before: descriptor.before,
             after: descriptor.after,
+            run_criteria: RunCriteriaContainer::new(descriptor.run_criteria),
             dependencies: Vec::new(),
         }
     }
@@ -48,8 +50,17 @@ impl SystemContainer {
     }
 
     #[inline]
+    pub fn run_criteria(&self) -> &RunCriteriaContainer {
+        &self.run_criteria
+    }
+
+    pub fn run_criteria_mut(&mut self) -> &mut RunCriteriaContainer {
+        &mut self.run_criteria
+    }
+
+    #[inline]
     pub fn should_run(&self) -> bool {
-        true
+        self.run_criteria.should_run().into()
     }
 
     #[inline]

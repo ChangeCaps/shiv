@@ -9,7 +9,8 @@ use crate::{
 };
 
 use super::{
-    IntoSystemDescriptor, ParallelExecutor, SequentialExecutor, SystemContainer, SystemExecutor,
+    IntoRunCriteria, IntoSystemDescriptor, ParallelExecutor, RunCriteria, SequentialExecutor,
+    ShouldRun, SystemContainer, SystemExecutor,
 };
 
 pub trait Stage: Downcast + Send + Sync {
@@ -32,6 +33,7 @@ impl_downcast!(Stage);
 pub struct SystemStage {
     world_id: Option<WorldId>,
     executor: Box<dyn SystemExecutor>,
+    run_criteria: RunCriteria,
     parallel_systems: Vec<SystemContainer>,
     uninitialized_parallel: Vec<usize>,
     systems_modified: bool,
@@ -43,6 +45,7 @@ impl SystemStage {
         Self {
             world_id: None,
             executor: Box::new(executor),
+            run_criteria: RunCriteria::default(),
             parallel_systems: Vec::new(),
             uninitialized_parallel: Vec::new(),
             systems_modified: true,
@@ -76,6 +79,16 @@ impl SystemStage {
     #[must_use]
     pub fn with_system<Params>(mut self, system: impl IntoSystemDescriptor<Params>) -> Self {
         self.add_system(system);
+        self
+    }
+
+    pub fn set_run_criteria<Marker>(&mut self, run_criteria: impl IntoRunCriteria<Marker>) {
+        self.run_criteria = run_criteria.into_run_criteria();
+    }
+
+    #[must_use]
+    pub fn with_run_criteria<Marker>(mut self, run_criteria: impl IntoRunCriteria<Marker>) -> Self {
+        self.set_run_criteria(run_criteria);
         self
     }
 
@@ -214,6 +227,11 @@ impl Stage for SystemStage {
     fn run(&mut self, world: &mut World) {
         self.validate_world(world);
 
+        match self.run_criteria.should_run(world) {
+            ShouldRun::Yes => {}
+            ShouldRun::No => return,
+        }
+
         if self.systems_modified {
             self.systems_modified = false;
             self.executor_modified = false;
@@ -226,6 +244,10 @@ impl Stage for SystemStage {
             self.executor_modified = false;
 
             self.executor.systems_changed(&self.parallel_systems);
+        }
+
+        for container in self.parallel_systems.iter_mut() {
+            container.run_criteria_mut().run(world);
         }
 
         // SAFETY:
