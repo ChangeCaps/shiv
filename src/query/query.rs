@@ -195,7 +195,7 @@ impl<Q: WorldQuery, F: ReadOnlyWorldQuery> QueryState<Q, F> {
 
 pub struct Query<'w, 's, Q: WorldQuery, F: ReadOnlyWorldQuery = ()> {
     world: &'w World,
-    state: &'s mut QueryState<Q, F>,
+    state: &'s QueryState<Q, F>,
     last_change_tick: u32,
     change_tick: u32,
 }
@@ -249,7 +249,7 @@ impl<'w, 's, Q: WorldQuery, F: ReadOnlyWorldQuery> Query<'w, 's, Q, F> {
     }
 
     #[inline]
-    pub fn iter(&self) -> QueryIter<Q::ReadOnly, F::ReadOnly> {
+    pub fn iter(&self) -> QueryIter<'_, 's, Q::ReadOnly, F::ReadOnly> {
         unsafe {
             self.state.as_readonly().iter_unchecked_manual(
                 self.world,
@@ -260,8 +260,28 @@ impl<'w, 's, Q: WorldQuery, F: ReadOnlyWorldQuery> Query<'w, 's, Q, F> {
     }
 
     #[inline]
-    pub fn iter_mut(&mut self) -> QueryIter<Q, F> {
+    pub fn iter_mut(&mut self) -> QueryIter<'_, 's, Q, F> {
         let state = &self.state;
         unsafe { state.iter_unchecked_manual(self.world, self.last_change_tick, self.change_tick) }
+    }
+}
+
+impl<'w, 's, Q: WorldQuery, F: ReadOnlyWorldQuery> IntoIterator for &'w Query<'_, 's, Q, F> {
+    type Item = ReadOnlyQueryItem<'w, Q>;
+    type IntoIter = QueryIter<'w, 's, Q::ReadOnly, F::ReadOnly>;
+
+    #[inline]
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+impl<'w, 's, Q: WorldQuery, F: ReadOnlyWorldQuery> IntoIterator for &'w mut Query<'_, 's, Q, F> {
+    type Item = QueryItem<'w, Q>;
+    type IntoIter = QueryIter<'w, 's, Q, F>;
+
+    #[inline]
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter_mut()
     }
 }

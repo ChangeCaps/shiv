@@ -89,6 +89,7 @@ impl<'w, Q: WorldQuery, F: ReadOnlyWorldQuery> QueryIterationCursor<'w, Q, F> {
 
             if self.entity_ids.contains(self.current_index) {
                 let entity = unsafe { self.entities.get_unchecked(self.current_index) };
+
                 if unsafe { F::filter_fetch(&mut self.filter, entity) } {
                     self.current_index += 1;
 
