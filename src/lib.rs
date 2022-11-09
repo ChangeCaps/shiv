@@ -171,4 +171,22 @@ mod tests {
         schedule.run_once(&mut world);
         schedule.run_once(&mut world);
     }
+
+    #[test]
+    fn different_worlds() {
+        let mut world_a = World::new();
+        let mut world_b = World::new();
+
+        world_a.init_resource::<HashMap<Entity, i32>>();
+        world_b.init_resource::<HashMap<Entity, i32>>();
+
+        let mut schedule = default_schedule();
+
+        schedule.add_system_to_stage(TestStage::A, spawn_system);
+        schedule.add_system_to_stage(TestStage::B, despawn_system);
+        schedule.add_system_to_stage(TestStage::C, spawn_system);
+
+        schedule.run_once(&mut world_a);
+        schedule.run_once(&mut world_b);
+    }
 }

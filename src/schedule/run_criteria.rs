@@ -41,9 +41,11 @@ impl RunCriteria {
     pub fn should_run(&mut self, world: &mut World) -> ShouldRun {
         if let Some(ref mut criteria) = self.criteria {
             match self.world_id {
-                Some(world_id) => {
-                    if world_id != world.id() {
-                        panic!("RunCriteria was created for a different world");
+                Some(ref mut world_id) => {
+                    if *world_id != world.id() {
+                        *world_id = world.id();
+
+                        criteria.init(world);
                     }
                 }
                 None => {

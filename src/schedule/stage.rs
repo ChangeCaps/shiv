@@ -103,12 +103,13 @@ impl SystemStage {
         &self.parallel_systems
     }
 
-    fn validate_world(&mut self, world: &World) {
-        if let Some(world_id) = self.world_id {
-            assert!(
-                world_id == world.id(),
-                "Cannot run SystemStage with multiple Worlds"
-            );
+    fn validate_world(&mut self, world: &mut World) {
+        if let Some(ref mut world_id) = self.world_id {
+            if *world_id != world.id() {
+                *world_id = world.id();
+
+                self.reinitialize_systems(world);
+            }
         } else {
             self.world_id = Some(world.id());
         }
@@ -117,6 +118,12 @@ impl SystemStage {
     fn initialize_systems(&mut self, world: &mut World) {
         for index in self.uninitialized_parallel.drain(..) {
             let container = &mut self.parallel_systems[index];
+            container.system_mut().init(world);
+        }
+    }
+
+    fn reinitialize_systems(&mut self, world: &mut World) {
+        for container in self.parallel_systems.iter_mut() {
             container.system_mut().init(world);
         }
     }

@@ -5,7 +5,10 @@ use crate::{
     world::{ComponentId, World, WorldId},
 };
 
-use super::{Access, SystemParam, SystemParamFetch, SystemParamItem, SystemParamState};
+use super::{
+    Access, ReadOnlySystemParamFetch, SystemParam, SystemParamFetch, SystemParamItem,
+    SystemParamState,
+};
 
 pub type BoxedSystem<In, Out> = Box<dyn System<In = In, Out = Out>>;
 
@@ -63,8 +66,20 @@ impl<Param: SystemParam + 'static> SystemState<Param> {
     }
 
     #[inline]
-    pub fn get<'w, 's>(&'s mut self, world: &'w World) -> SystemParamItem<'w, 's, Param> {
+    pub fn get<'w, 's>(&'s mut self, world: &'w World) -> SystemParamItem<'w, 's, Param>
+    where
+        Param::Fetch: ReadOnlySystemParamFetch,
+    {
         self.validate_world(world);
+
+        unsafe { self.get_unchecked_manual(world) }
+    }
+
+    #[inline]
+    pub fn get_mut<'w, 's>(&'s mut self, world: &'w mut World) -> SystemParamItem<'w, 's, Param> {
+        if self.world_id != world.id() {
+            *self = Self::new(world);
+        }
 
         unsafe { self.get_unchecked_manual(world) }
     }
@@ -80,9 +95,13 @@ impl<Param: SystemParam + 'static> SystemState<Param> {
     }
 
     #[inline]
-    fn validate_world(&self, world: &World) {
+    fn validate_world(&mut self, world: &World) {
         if !self.matches_world(world) {
-            panic!("System state was created for a different world");
+            panic!(
+                "World mismatch: expected {:?}, got {:?}",
+                self.world_id,
+                world.id()
+            );
         }
     }
 
