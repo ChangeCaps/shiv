@@ -1,6 +1,13 @@
+mod system_param;
+
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
 use syn::{parse_macro_input, Data, DeriveInput, Fields};
+
+#[proc_macro_derive(SystemParam)]
+pub fn derive_system_param(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    system_param::derive_system_param(input)
+}
 
 #[proc_macro_derive(Component)]
 pub fn derive_component(input: proc_macro::TokenStream) -> proc_macro::TokenStream {

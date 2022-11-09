@@ -13,6 +13,8 @@ use crate::{
 
 use super::{Access, CommandQueue, Commands, SystemMeta};
 
+pub use shiv_macro::SystemParam;
+
 pub unsafe trait ReadOnlySystemParamFetch: for<'w, 's> SystemParamFetch<'w, 's> {}
 
 pub trait SystemParam: Sized {

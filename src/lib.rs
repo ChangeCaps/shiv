@@ -28,7 +28,8 @@ pub mod prelude {
     };
     pub use crate::storage::{DenseStorage, Resource};
     pub use crate::system::{
-        Commands, EntityCommands, IntoPipeSystem, Res, ResInit, ResMut, ResMutInit,
+        Commands, EntityCommands, IntoPipeSystem, Local, Res, ResInit, ResMut, ResMutInit,
+        SystemParam,
     };
     pub use crate::world::{Component, Entity, EntityMut, EntityRef, FromWorld, World};
 }
