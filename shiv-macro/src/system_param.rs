@@ -15,10 +15,12 @@ pub fn derive_system_param(input: proc_macro::TokenStream) -> proc_macro::TokenS
 
     let state_generics = state_generics(&input.generics);
     let fetch_generics = fetch_generics(&input.generics);
+    let read_only_generics = read_only_generics(&input.generics);
 
     let (state_impl_generics, state_ty_generics, state_where_clause) =
         state_generics.split_for_impl();
     let (fetch_impl_generics, _, _) = fetch_generics.split_for_impl();
+    let (_, _, read_only_where_clause) = read_only_generics.split_for_impl();
 
     let marker_generics = marker_generics(&input.generics);
     let fetch_ty_generics = fetch_ty_generics(&input.generics, &fields);
@@ -37,10 +39,15 @@ pub fn derive_system_param(input: proc_macro::TokenStream) -> proc_macro::TokenS
                 type Fetch = FetchState<#fetch_ty_generics>;
             }
 
-
             #vis struct FetchState #state_ty_generics #state_where_clause {
                 state: __TSystemParamState,
                 marker: ::std::marker::PhantomData<fn() -> (#marker_generics)>,
+            }
+
+            #[automatically_derived]
+            unsafe impl #state_impl_generics shiv::system::ReadOnlySystemParamFetch for
+                FetchState #state_ty_generics #read_only_where_clause
+            {
             }
 
             #[automatically_derived]
@@ -71,20 +78,21 @@ pub fn derive_system_param(input: proc_macro::TokenStream) -> proc_macro::TokenS
                 type Item = #name #ty_generics;
 
                 #[inline]
+                #[allow(dead_code)]
                 unsafe fn get_param(
                     &'s mut self,
                     meta: &shiv::system::SystemMeta,
                     world: &'w shiv::world::World,
                     change_ticks: ::std::primitive::u32,
                 ) -> Self::Item {
-                    #name {#(
-                        #field_idents: shiv::system::SystemParamFetch::get_param(
-                            &mut self.state,
-                            meta,
-                            world,
-                            change_ticks
-                        ).#indices,
-                    )*}
+                    let param = shiv::system::SystemParamFetch::get_param(
+                        &mut self.state,
+                        meta,
+                        world,
+                        change_ticks
+                    );
+
+                    #name {#(#field_idents: param.#indices,)*}
                 }
             }
         };
@@ -149,6 +157,20 @@ fn state_generics(generics: &Generics) -> Generics {
 
     generics.make_where_clause().predicates.push(parse_quote!(
         Self: ::std::marker::Send + ::std::marker::Sync + 'static
+    ));
+
+    generics
+}
+
+fn read_only_generics(generics: &Generics) -> Generics {
+    let mut generics = generics.clone();
+
+    let where_clause = generics.make_where_clause();
+    where_clause.predicates.push(parse_quote!(
+        __TSystemParamState: shiv::system::ReadOnlySystemParamFetch
+    ));
+    where_clause.predicates.push(parse_quote!(
+        Self: for<'w, 's> shiv::system::SystemParamFetch<'w, 's>
     ));
 
     generics

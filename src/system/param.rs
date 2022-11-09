@@ -13,14 +13,32 @@ use crate::{
 
 use super::{Access, CommandQueue, Commands, SystemMeta};
 
+/// Derive macro for [`SystemParam`].
+///
+/// For more information, see [`SystemParam`].
 pub use shiv_macro::SystemParam;
 
 pub unsafe trait ReadOnlySystemParamFetch: for<'w, 's> SystemParamFetch<'w, 's> {}
 
+/// A trait that allows a type to be used as a parameter to a system.
+///
+/// This trait can be derived using the `#[derive(SystemParam)]` attribute.
+///
+/// # Examples
+/// ```rust
+/// # use shiv::prelude::*;
+/// // only 'w and 's are allowed as lifetime parameters
+/// #[derive(SystemParam)]
+/// struct MyParam<'w, 's> {
+///     local: Local<'s, u32>,
+///     resource: Res<'w, String>,
+/// }
+/// ```
 pub trait SystemParam: Sized {
     type Fetch: for<'w, 's> SystemParamFetch<'w, 's>;
 }
 
+/// The item fetched by a [`SystemParam`].
 pub type SystemParamItem<'w, 's, P> = <<P as SystemParam>::Fetch as SystemParamFetch<'w, 's>>::Item;
 
 pub unsafe trait SystemParamState: Send + Sync + 'static {
