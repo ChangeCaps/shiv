@@ -15,6 +15,8 @@ pub unsafe trait WorldQuery {
 
     /// # Safety
     /// - `state` must be the result of [`WorldQuery::init_state`] with the same `world`.
+    /// - This function does not check borrow rules, so it's up to the caller to ensure that access
+    /// is valid.
     unsafe fn init_fetch<'w>(
         world: &'w World,
         state: &Self::State,
@@ -25,9 +27,15 @@ pub unsafe trait WorldQuery {
     fn contains<'w>(fetch: &mut Self::Fetch<'w>, entity: Entity) -> bool;
 
     /// Fetch a single item from the given `fetch` and `entity`.
+    ///
+    /// # Safety
+    /// - `fetch` must be the result of [`WorldQuery::init_fetch`].
     unsafe fn fetch<'w>(fetch: &mut Self::Fetch<'w>, entity: Entity) -> Self::Item<'w>;
 
     /// Fetches the filter for this query.
+    ///
+    /// # Safety
+    /// - `fetch` must be the result of [`WorldQuery::init_fetch`].
     #[inline]
     unsafe fn filter_fetch<'w>(_fetch: &mut Self::Fetch<'w>, _entity: Entity) -> bool {
         true

@@ -14,9 +14,13 @@ use crate::{
     world::World,
 };
 
+/// [`Event`]s are used to communicate between systems.
+///
+/// Use an [`EventReader`] to read events and an [`EventWriter`] to send events.
 pub trait Event: Send + Sync + 'static {}
 impl<T: Send + Sync + 'static> Event for T {}
 
+/// An identifier for an [`Event`].
 pub struct EventId<E: Event> {
     pub id: usize,
     _marker: PhantomData<E>,
@@ -118,6 +122,9 @@ impl<E: Event> DerefMut for EventSequence<E> {
     }
 }
 
+/// Storage [`Resource`] for [`Event`]s.
+///
+/// This should usually not be used manually see, [`EventReader`] and [`EventWriter`].
 #[derive(Debug)]
 pub struct Events<E: Event> {
     events_a: EventSequence<E>,
@@ -199,6 +206,7 @@ impl<E: Event> Events<E> {
     }
 }
 
+/// A reader for [`Event`]s.
 #[derive(Debug)]
 pub struct EventReader<'w, 's, E: Event> {
     reader: Local<'s, ManualEventReader<E>>,
@@ -274,17 +282,22 @@ impl<'w, 's, E: Event> SystemParam for EventReader<'w, 's, E> {
     type Fetch = EventReaderState<E>;
 }
 
+/// A writer for [`Event`]s.
+///
+/// Use [`EventWriter::send`] to send events.
 #[derive(Debug)]
 pub struct EventWriter<'w, E: Event> {
     events: ResMut<'w, Events<E>>,
 }
 
 impl<'w, E: Event> EventWriter<'w, E> {
+    /// Sends an event.
     #[inline]
     pub fn send(&mut self, event: E) {
         self.events.send(event);
     }
 
+    /// Sends [`Default::default`].
     #[inline]
     pub fn send_default(&mut self)
     where
@@ -331,6 +344,9 @@ impl<'w, E: Event> SystemParam for EventWriter<'w, E> {
     type Fetch = EventWriterState<E>;
 }
 
+/// A manual event reader.
+///
+/// This should usually be used through [`EventReader`].
 #[derive(Debug)]
 pub struct ManualEventReader<E: Event> {
     last_event_count: usize,
