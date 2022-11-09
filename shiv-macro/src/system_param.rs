@@ -20,23 +20,8 @@ pub fn derive_system_param(input: proc_macro::TokenStream) -> proc_macro::TokenS
         state_generics.split_for_impl();
     let (fetch_impl_generics, _, _) = fetch_generics.split_for_impl();
 
-    let mut marker_generics = Punctuated::<TokenStream, Comma>::new();
-    for generic in input.generics.params.iter() {
-        if let GenericParam::Type(ty) = generic {
-            let ident = &ty.ident;
-            marker_generics.push(parse_quote!(#ident));
-        }
-    }
-
-    let mut fetch_ty_generics = Punctuated::<TokenStream, Comma>::new();
-    for generic in input.generics.params.iter() {
-        if let GenericParam::Type(ty) = generic {
-            let ident = &ty.ident;
-            fetch_ty_generics.push(parse_quote!(#ident));
-        }
-    }
-
-    fetch_ty_generics.push(quote!((#(<#fields as shiv::system::SystemParam>::Fetch,)*)));
+    let marker_generics = marker_generics(&input.generics);
+    let fetch_ty_generics = fetch_ty_generics(&input.generics, &fields);
 
     let indices = (0..fields.len()).map(|i| Index::from(i));
 
@@ -167,6 +152,32 @@ fn state_generics(generics: &Generics) -> Generics {
     ));
 
     generics
+}
+
+fn marker_generics(generics: &Generics) -> Punctuated<TokenStream, Comma> {
+    let mut marker_generics = Punctuated::<TokenStream, Comma>::new();
+    for generic in generics.params.iter() {
+        if let GenericParam::Type(ty) = generic {
+            let ident = &ty.ident;
+            marker_generics.push(parse_quote!(#ident));
+        }
+    }
+
+    marker_generics
+}
+
+fn fetch_ty_generics(generics: &Generics, fields: &[Type]) -> Punctuated<TokenStream, Comma> {
+    let mut fetch_ty_generics = Punctuated::<TokenStream, Comma>::new();
+    for generic in generics.params.iter() {
+        if let GenericParam::Type(ty) = generic {
+            let ident = &ty.ident;
+            fetch_ty_generics.push(parse_quote!(#ident));
+        }
+    }
+
+    fetch_ty_generics.push(quote!((#(<#fields as shiv::system::SystemParam>::Fetch,)*)));
+
+    fetch_ty_generics
 }
 
 fn fields(data: &Data) -> Vec<Type> {
