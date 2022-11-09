@@ -97,7 +97,7 @@ impl<'w, T> Deref for Mut<'w, T> {
 impl<'w, T> DerefMut for Mut<'w, T> {
     #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
-        self.value
+        self.get_mut()
     }
 }
 

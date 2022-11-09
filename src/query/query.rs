@@ -58,12 +58,8 @@ impl<Q: WorldQuery, F: ReadOnlyWorldQuery> QueryState<Q, F> {
     }
 
     #[inline]
-    pub fn contains(&self, world: &World, entity: Entity) -> bool {
+    pub fn matches(&self, world: &World, entity: Entity) -> bool {
         self.debug_validate_world(world);
-
-        if !world.contains_entity(entity) {
-            return false;
-        }
 
         for id in self.filtered_access.iter_with() {
             if !world.storage.contains(id, entity) {
@@ -107,7 +103,7 @@ impl<Q: WorldQuery, F: ReadOnlyWorldQuery> QueryState<Q, F> {
         last_change_tick: u32,
         change_tick: u32,
     ) -> Option<Q::Item<'w>> {
-        if !self.contains(world, entity) {
+        if !self.matches(world, entity) {
             return None;
         }
 
@@ -137,6 +133,16 @@ impl<Q: WorldQuery, F: ReadOnlyWorldQuery> QueryState<Q, F> {
     pub fn debug_validate_world(&self, world: &World) {
         #[cfg(debug_assertions)]
         self.validate_world(world);
+    }
+
+    #[inline]
+    pub fn is_empty(&self, world: &World) -> bool {
+        self.iter(world).next().is_none()
+    }
+
+    #[inline]
+    pub fn contains(&self, world: &World, entity: Entity) -> bool {
+        self.get(world, entity).is_some()
     }
 
     #[inline]
@@ -221,12 +227,12 @@ impl<'w, 's, Q: WorldQuery, F: ReadOnlyWorldQuery> Query<'w, 's, Q, F> {
 
     #[inline]
     pub fn is_empty(&self) -> bool {
-        self.state.get_entities(self.world).is_empty()
+        self.iter().next().is_none()
     }
 
     #[inline]
     pub fn contains(&self, entity: Entity) -> bool {
-        self.state.contains(self.world, entity)
+        self.get(entity).is_some()
     }
 
     #[inline]

@@ -82,10 +82,6 @@ mod tests {
         if query.is_empty() {
             panic!("Changed not detected");
         }
-
-        for item in query.iter() {
-            assert_eq!(*item, 3);
-        }
     }
 
     fn default_schedule() -> Schedule {
@@ -140,12 +136,19 @@ mod tests {
         let mut world = World::new();
         let mut schedule = default_schedule();
 
-        world.spawn().insert(2);
+        let entity = world.spawn().insert(2).entity();
+
+        schedule.add_system_to_stage(
+            TestStage::B,
+            detect_added_system.with_run_criteria(ShouldRun::once),
+        );
+        schedule.add_system_to_stage(TestStage::B, detect_changed_system);
+        schedule.run_once(&mut world);
+
+        world.entity_mut(entity).insert(3);
+        schedule.run_once(&mut world);
 
         schedule.add_system_to_stage(TestStage::A, increment_system);
-        schedule.add_system_to_stage(TestStage::B, detect_added_system);
-        schedule.add_system_to_stage(TestStage::B, detect_changed_system);
-
         schedule.run_once(&mut world);
     }
 
