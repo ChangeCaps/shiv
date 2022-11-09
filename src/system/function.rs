@@ -3,7 +3,11 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
-use crate::{change_detection::MAX_CHANGE_AGE, world::World};
+use crate::{
+    change_detection::MAX_CHANGE_AGE,
+    storage::SparseArray,
+    world::{World, WorldId},
+};
 
 use super::{System, SystemMeta, SystemParam, SystemParamFetch, SystemParamItem, SystemParamState};
 
@@ -32,6 +36,8 @@ where
     func: F,
     param_state: Option<Param::Fetch>,
     meta: SystemMeta,
+    last_change_ticks: SparseArray<u32>,
+    world_id: Option<WorldId>,
     _marker: PhantomData<fn() -> (In, Out, Marker)>,
 }
 
@@ -51,6 +57,8 @@ where
             func: self,
             param_state: None,
             meta: SystemMeta::new::<Self>(),
+            last_change_ticks: SparseArray::new(),
+            world_id: None,
             _marker: PhantomData,
         }
     }
@@ -79,12 +87,24 @@ where
 
     #[inline]
     fn init(&mut self, world: &mut World) {
+        if let Some(world_id) = self.world_id {
+            self.last_change_ticks
+                .insert(world_id.index(), self.meta.last_change_tick);
+        }
+
+        if let Some(last_change_tick) = self.last_change_ticks.get(world.id().index()) {
+            self.meta.last_change_tick = *last_change_tick;
+        } else {
+            self.meta.last_change_tick = world.change_tick().wrapping_sub(MAX_CHANGE_AGE);
+        }
+
         self.meta.access.clear();
-        self.meta.last_change_tick = world.change_tick().wrapping_sub(MAX_CHANGE_AGE);
         self.param_state = Some(<Param::Fetch as SystemParamState>::init(
             world,
             &mut self.meta,
         ));
+
+        self.world_id = Some(world.id());
     }
 
     #[inline]

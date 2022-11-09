@@ -2,6 +2,7 @@ use std::borrow::Cow;
 
 use crate::{
     change_detection::MAX_CHANGE_AGE,
+    storage::SparseArray,
     world::{ComponentId, World, WorldId},
 };
 
@@ -37,6 +38,7 @@ impl SystemMeta {
 pub struct SystemState<Param: SystemParam + 'static> {
     meta: SystemMeta,
     param_state: <Param as SystemParam>::Fetch,
+    last_change_ticks: SparseArray<u32>,
     world_id: WorldId,
 }
 
@@ -48,11 +50,36 @@ impl<Param: SystemParam + 'static> SystemState<Param> {
         let param_state = <Param::Fetch as SystemParamState>::init(world, &mut meta);
         let world_id = world.id();
 
+        let mut last_change_ticks = SparseArray::new();
+        last_change_ticks.insert(world_id.index(), meta.last_change_tick);
+
         Self {
             meta,
             param_state,
+            last_change_ticks,
             world_id,
         }
+    }
+
+    #[inline]
+    fn init(&mut self, world: &mut World) {
+        if self.world_id == world.id() {
+            return;
+        }
+
+        self.last_change_ticks
+            .insert(self.world_id.index(), self.meta.last_change_tick);
+
+        if let Some(last_change_tick) = self.last_change_ticks.get(world.id().index()) {
+            self.meta.last_change_tick = *last_change_tick;
+        } else {
+            self.meta.last_change_tick = world.change_tick().wrapping_sub(MAX_CHANGE_AGE);
+        }
+
+        self.meta.access.clear();
+        <Param::Fetch as SystemParamState>::init(world, &mut self.meta);
+
+        self.world_id = world.id();
     }
 
     #[inline]
@@ -78,7 +105,7 @@ impl<Param: SystemParam + 'static> SystemState<Param> {
     #[inline]
     pub fn get_mut<'w, 's>(&'s mut self, world: &'w mut World) -> SystemParamItem<'w, 's, Param> {
         if self.world_id != world.id() {
-            *self = Self::new(world);
+            self.init(world);
         }
 
         unsafe { self.get_unchecked_manual(world) }

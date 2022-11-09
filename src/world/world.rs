@@ -18,6 +18,11 @@ impl WorldId {
         static NEXT_ID: AtomicU32 = AtomicU32::new(0);
         Self(NEXT_ID.fetch_add(1, Ordering::AcqRel) as usize)
     }
+
+    #[inline]
+    pub const fn index(self) -> usize {
+        self.0
+    }
 }
 
 pub trait FromWorld: Sized {

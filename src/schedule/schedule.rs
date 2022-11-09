@@ -397,10 +397,6 @@ impl Schedule {
     }
 
     /// Runs the schedule once.
-    ///
-    /// **Note:** Whenever this is run with a different [`World`], every system will be
-    /// [`System::init`] again, meaning all **changed** and **added** detection will trigger.
-    /// In general, a [`Schedule`] should only be run with one [`World`].
     pub fn run_once(&mut self, world: &mut World) {
         match self.run_criteria.should_run(world) {
             ShouldRun::Yes => {}
