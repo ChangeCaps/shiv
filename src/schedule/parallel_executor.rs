@@ -7,7 +7,7 @@ use hyena::{Scope, TaskPool};
 use tracing::Instrument;
 
 use crate::{
-    system::Access,
+    system::FilteredAccess,
     world::{ComponentId, World},
 };
 
@@ -19,7 +19,7 @@ struct ParallelSystemMeta {
     dependants: Vec<usize>,
     dependencies_total: usize,
     dependencies_remaining: usize,
-    access: Access<ComponentId>,
+    access: FilteredAccess<ComponentId>,
 }
 
 #[derive(Debug)]
@@ -29,7 +29,7 @@ pub struct ParallelExecutor {
     finished_receiver: Receiver<usize>,
     queued: FixedBitSet,
     running: FixedBitSet,
-    current_access: Access<ComponentId>,
+    current_access: FilteredAccess<ComponentId>,
     task_pool: TaskPool,
 }
 
@@ -56,7 +56,7 @@ impl ParallelExecutor {
             finished_receiver,
             queued: FixedBitSet::new(),
             running: FixedBitSet::new(),
-            current_access: Access::default(),
+            current_access: FilteredAccess::default(),
             task_pool,
         }
     }
@@ -104,7 +104,7 @@ impl ParallelExecutor {
             if can_run {
                 let task = async move {
                     #[cfg(feature = "tracing")]
-                    let _ = system_span.enter();
+                    let _guard = system_span.enter();
 
                     unsafe { system.system_mut().run((), world) };
                     finished_sender.send(index).await.unwrap();
@@ -123,7 +123,7 @@ impl ParallelExecutor {
                     start.await;
 
                     #[cfg(feature = "tracing")]
-                    let _ = system_span.enter();
+                    let _guard = system_span.enter();
 
                     unsafe { system.system_mut().run((), world) };
                     finished_sender.send(index).await.unwrap();

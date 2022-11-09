@@ -8,7 +8,6 @@ pub struct Access<T> {
     write: FixedBitSet,
 
     read_all: bool,
-    entities: bool,
 
     _marker: PhantomData<fn() -> T>,
 }
@@ -21,7 +20,6 @@ impl<T> Default for Access<T> {
             write: FixedBitSet::with_capacity(0),
 
             read_all: false,
-            entities: false,
 
             _marker: PhantomData,
         }
@@ -70,11 +68,6 @@ where
     }
 
     #[inline]
-    pub fn read_entities(&mut self) {
-        self.entities = true;
-    }
-
-    #[inline]
     pub fn has_read(&self, index: T) -> bool {
         self.read_all || self.read.contains(index.into())
     }
@@ -99,26 +92,18 @@ where
     }
 
     #[inline]
-    pub fn is_entities(&self) -> bool {
-        self.read.is_empty() && !self.read_all && self.entities
-    }
-
-    #[inline]
     pub fn get_conflicts(&self, other: &Self) -> Vec<T> {
         let mut conflicts = Vec::new();
-
-        for read in self.iter_read() {
-            if other.has_write(read) {
-                conflicts.push(read);
-            }
+        if self.read_all {
+            conflicts.extend(other.iter_write());
         }
 
-        for write in self.iter_write() {
-            if other.has_read(write) {
-                conflicts.push(write);
-            }
+        if other.read_all {
+            conflicts.extend(self.iter_write());
         }
 
+        conflicts.extend(self.write.intersection(&other.read).map(T::from));
+        conflicts.extend(self.read.intersection(&other.write).map(T::from));
         conflicts
     }
 
@@ -226,11 +211,6 @@ where
     }
 
     #[inline]
-    pub fn read_entities(&mut self) {
-        self.access.read_entities();
-    }
-
-    #[inline]
     pub fn has_read(&self, index: T) -> bool {
         self.access.has_read(index)
     }
@@ -258,22 +238,21 @@ where
     }
 
     #[inline]
-    pub fn is_entities(&self) -> bool {
-        self.access.is_entities()
-    }
-
-    #[inline]
     pub fn get_conflicts(&self, other: &Self) -> Vec<T> {
-        self.access.get_conflicts(&other.access)
+        if !self.is_compatible(other) {
+            self.access.get_conflicts(&other.access)
+        } else {
+            Vec::new()
+        }
     }
 
     #[inline]
-    pub fn compatible(&self, other: &Self) -> bool {
+    pub fn is_compatible(&self, other: &Self) -> bool {
         if self.access().is_compatible(other.access()) {
             true
         } else {
             self.with.intersection(&other.without).next().is_some()
-                && self.without.intersection(&other.with).next().is_some()
+                || self.without.intersection(&other.with).next().is_some()
         }
     }
 

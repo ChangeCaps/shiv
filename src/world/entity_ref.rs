@@ -30,6 +30,20 @@ impl<'w> EntityRef<'w> {
     }
 
     #[inline]
+    pub fn contains<T: Component>(&self) -> bool {
+        let id = if let Some(id) = self.world.components.get_component::<T>() {
+            id
+        } else {
+            return false;
+        };
+
+        let storage_sets = <T::Storage as Storage>::get(&self.world.storage);
+        let storage = unsafe { storage_sets.get_unchecked(id) };
+
+        storage.contains(self.entity)
+    }
+
+    #[inline]
     pub fn get<T: Component>(&self) -> Option<&T> {
         let id = self.world.components.get_component::<T>()?;
 
@@ -61,6 +75,20 @@ impl<'w> EntityMut<'w> {
     #[inline]
     pub fn world(&self) -> &World {
         self.world
+    }
+
+    #[inline]
+    pub fn contains<T: Component>(&self) -> bool {
+        let id = if let Some(id) = self.world.components.get_component::<T>() {
+            id
+        } else {
+            return false;
+        };
+
+        let storage_sets = <T::Storage as Storage>::get(&self.world.storage);
+        let storage = unsafe { storage_sets.get_unchecked(id) };
+
+        storage.contains(self.entity)
     }
 
     #[inline]

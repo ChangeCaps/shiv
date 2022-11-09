@@ -47,6 +47,18 @@ impl<T> SparseArray<T> {
     }
 
     #[inline]
+    pub fn get_or_default(&mut self, index: usize) -> &mut T
+    where
+        T: Default,
+    {
+        if !self.contains(index) {
+            self.insert(index, T::default());
+        }
+
+        unsafe { self.get_unchecked_mut(index) }
+    }
+
+    #[inline]
     pub fn insert(&mut self, index: usize, value: T) {
         if index >= self.data.len() {
             self.data.resize_with(index + 1, Default::default);

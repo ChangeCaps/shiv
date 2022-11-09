@@ -11,7 +11,7 @@ use crate::{
     world::{ComponentId, FromWorld, World},
 };
 
-use super::{Access, CommandQueue, Commands, SystemMeta};
+use super::{CommandQueue, Commands, FilteredAccess, SystemMeta};
 
 /// Derive macro for [`SystemParam`].
 ///
@@ -100,12 +100,12 @@ where
         assert_access_compatibility(
             std::any::type_name::<Q>(),
             std::any::type_name::<F>(),
-            state.filtered_access.access(),
+            &state.filtered_access,
             meta,
             world,
         );
 
-        meta.access.extend(state.filtered_access.access());
+        meta.access.extend(&state.filtered_access);
 
         state
     }
@@ -146,7 +146,7 @@ where
 fn assert_access_compatibility(
     query_type: &'static str,
     filter_type: &'static str,
-    access: &Access<ComponentId>,
+    access: &FilteredAccess<ComponentId>,
     meta: &SystemMeta,
     world: &World,
 ) {

@@ -87,9 +87,7 @@ unsafe impl WorldQuery for Entity {
     fn init_state(_world: &mut World) -> Self::State {}
 
     #[inline]
-    fn update_component_access(_state: &Self::State, access: &mut FilteredAccess<ComponentId>) {
-        access.read_entities();
-    }
+    fn update_component_access(_state: &Self::State, _access: &mut FilteredAccess<ComponentId>) {}
 
     #[inline]
     fn matches_component_set(_state: &Self::State, _id: ComponentId) -> bool {

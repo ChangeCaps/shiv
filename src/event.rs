@@ -8,8 +8,8 @@ use std::{
 
 use crate::{
     system::{
-        Local, LocalState, ReadOnlySystemParamFetch, Res, ResMut, ResMutState, ResState,
-        SystemMeta, SystemParam, SystemParamFetch, SystemParamState,
+        Local, LocalState, ReadOnlySystemParamFetch, Res, ResMut, ResMutInit, ResMutState,
+        ResState, SystemMeta, SystemParam, SystemParamFetch, SystemParamState,
     },
     world::World,
 };
@@ -178,7 +178,7 @@ impl<E: Event> Events<E> {
     }
 
     #[inline]
-    pub fn update_system(mut events: ResMut<Self>) {
+    pub fn update_system(mut events: ResMutInit<Self>) {
         events.update();
     }
 

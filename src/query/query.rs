@@ -35,20 +35,16 @@ impl<Q: WorldQuery, F: ReadOnlyWorldQuery> QueryState<Q, F> {
     pub fn get_entities(&self, world: &World) -> EntityIdSet {
         self.debug_validate_world(world);
 
-        let mut entities = if self.filtered_access.is_entities() {
-            world.entities.entity_ids().clone()
+        let mut iter = self.filtered_access.iter_with();
+
+        let mut entities = if let Some(id) = iter.next() {
+            world.storage.entity_ids(id)
         } else {
-            EntityIdSet::new()
+            world.entities.entity_ids().clone()
         };
 
-        let mut is_first = true;
-        for id in self.filtered_access.iter_with() {
-            if is_first {
-                entities.union_with(&world.storage.entity_ids(id));
-                is_first = false;
-            } else {
-                entities.intersect_with(&world.storage.entity_ids(id));
-            }
+        for id in iter {
+            entities.intersect_with(&world.storage.entity_ids(id));
         }
 
         for id in self.filtered_access.iter_without() {

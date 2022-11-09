@@ -7,7 +7,7 @@ use crate::{
 };
 
 use super::{
-    Access, ReadOnlySystemParamFetch, SystemParam, SystemParamFetch, SystemParamItem,
+    FilteredAccess, ReadOnlySystemParamFetch, SystemParam, SystemParamFetch, SystemParamItem,
     SystemParamState,
 };
 
@@ -16,7 +16,7 @@ pub type BoxedSystem<In, Out> = Box<dyn System<In = In, Out = Out>>;
 #[derive(Debug)]
 pub struct SystemMeta {
     pub name: Cow<'static, str>,
-    pub access: Access<ComponentId>,
+    pub access: FilteredAccess<ComponentId>,
     pub last_change_tick: u32,
 }
 
@@ -25,7 +25,7 @@ impl SystemMeta {
     pub fn new<T>() -> Self {
         Self {
             name: std::any::type_name::<T>().into(),
-            access: Access::default(),
+            access: FilteredAccess::default(),
             last_change_tick: 0,
         }
     }

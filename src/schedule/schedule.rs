@@ -405,7 +405,7 @@ impl Schedule {
 
         for stage_id in &self.stage_order {
             #[cfg(feature = "tracing")]
-            let _ = tracing::info_span!("stage", name = stage_id.label().to_string()).entered();
+            let _guard = tracing::info_span!("stage", name = stage_id.to_string()).entered();
 
             let stage = self.stages.get_mut(stage_id).unwrap();
             stage.run(world);

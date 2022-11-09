@@ -75,6 +75,11 @@ impl World {
     }
 
     #[inline]
+    pub fn entities(&self) -> &Entities {
+        &self.entities
+    }
+
+    #[inline]
     pub fn reserve_entity(&self) -> Entity {
         self.entities.reserve()
     }
@@ -217,7 +222,10 @@ impl World {
         if self.contains_entity(entity) {
             EntityMut::new(self, entity)
         } else {
-            self.entities.alloc_at(entity);
+            if self.entities.alloc_at(entity) {
+                self.despawn(entity);
+            }
+
             EntityMut::new(self, entity)
         }
     }
