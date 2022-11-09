@@ -30,6 +30,11 @@ impl SystemContainer {
     }
 
     #[inline]
+    pub fn name(&self) -> &str {
+        self.system.meta().name()
+    }
+
+    #[inline]
     pub fn system(&self) -> &dyn System<In = (), Out = ()> {
         self.system.as_ref()
     }

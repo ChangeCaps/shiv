@@ -35,6 +35,9 @@ impl SystemExecutor for SequentialExecutor {
     unsafe fn run_systems(&mut self, systems: &mut [SystemContainer], world: &mut World) {
         for system in systems {
             if system.should_run() {
+                #[cfg(feature = "tracing")]
+                let _ = tracing::info_span!("system", name = system.name()).entered();
+
                 // SAFETY:
                 // - we know that systems are run sequentially,
                 // so no two systems will be run at the same time

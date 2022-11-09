@@ -22,3 +22,8 @@ event-listener = "2.5"
 fixedbitset = "0.4"
 hashbrown = "0.12"
 hyena = "0.2"
+tracing = { version = "0.1", default-features = false, optional = true }
+
+[features]
+default = ["tracing"]
+tracing = ["dep:tracing"]

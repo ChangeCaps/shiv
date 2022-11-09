@@ -3,6 +3,9 @@ use event_listener::Event;
 use fixedbitset::FixedBitSet;
 use hyena::{Scope, TaskPool};
 
+#[cfg(feature = "tracing")]
+use tracing::Instrument;
+
 use crate::{
     system::Access,
     world::{ComponentId, World},
@@ -92,12 +95,23 @@ impl ParallelExecutor {
                 self.queued.set(index, true);
             }
 
+            #[cfg(feature = "tracing")]
+            let system_span = tracing::info_span!("system", name = system.name());
+            #[cfg(feature = "tracing")]
+            let overhead_span = tracing::info_span!("system overhead", name = system.name());
+
             let finished_sender = self.finished_sender.clone();
             if can_run {
                 let task = async move {
+                    #[cfg(feature = "tracing")]
+                    let _ = system_span.enter();
+
                     unsafe { system.system_mut().run((), world) };
                     finished_sender.send(index).await.unwrap();
                 };
+
+                #[cfg(feature = "tracing")]
+                let task = task.instrument(overhead_span);
 
                 scope.spawn(task);
 
@@ -107,9 +121,16 @@ impl ParallelExecutor {
                 let start = meta.start.listen();
                 let task = async move {
                     start.await;
+
+                    #[cfg(feature = "tracing")]
+                    let _ = system_span.enter();
+
                     unsafe { system.system_mut().run((), world) };
                     finished_sender.send(index).await.unwrap();
                 };
+
+                #[cfg(feature = "tracing")]
+                let task = task.instrument(overhead_span);
 
                 scope.spawn(task);
             }
