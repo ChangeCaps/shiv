@@ -67,19 +67,29 @@ impl<Param: SystemParam + 'static> SystemState<Param> {
             return;
         }
 
-        self.last_change_ticks
-            .insert(self.world_id.index(), self.meta.last_change_tick);
-
-        if let Some(last_change_tick) = self.last_change_ticks.get(world.id().index()) {
-            self.meta.last_change_tick = *last_change_tick;
-        } else {
-            self.meta.last_change_tick = world.change_tick().wrapping_sub(MAX_CHANGE_AGE);
-        }
+        self.store_last_change_tick();
+        self.meta.last_change_tick = self.get_last_change_tick(world);
 
         self.meta.access.clear();
         <Param::Fetch as SystemParamState>::init(world, &mut self.meta);
 
         self.world_id = world.id();
+    }
+
+    #[inline]
+    fn store_last_change_tick(&mut self) {
+        let index = self.world_id.index();
+        (self.last_change_ticks).insert(index, self.meta.last_change_tick);
+    }
+
+    #[inline]
+    fn get_last_change_tick(&self, world: &World) -> u32 {
+        let index = world.id().index();
+        if let Some(&last_change_tick) = self.last_change_ticks.get(index) {
+            last_change_tick
+        } else {
+            world.change_tick().wrapping_sub(MAX_CHANGE_AGE)
+        }
     }
 
     #[inline]
