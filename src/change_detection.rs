@@ -59,29 +59,21 @@ impl<'w, T> Mut<'w, T> {
         *self.value = value;
     }
 
+    /// Returns `true` if `value` has changed.
+    pub fn is_changed(&self) -> bool {
+        self.ticks.is_changed()
+    }
+
     /// Marks `self` as changed.
     #[inline]
-    pub fn set_changed(&mut self) {
-        self.ticks.set_changed();
-    }
-
-    /// Gets a reference to the inner value.
-    #[inline]
-    pub fn get(&self) -> &T {
-        self.value
-    }
-
-    /// Gets a mutable reference to the inner value and marks `self` as changed.
-    #[inline]
-    pub fn get_mut(&mut self) -> &mut T {
-        self.set_changed();
-        self.value
+    pub fn set_changed(this: &mut Self) {
+        this.ticks.set_changed();
     }
 
     /// Gets a mutable reference to the inner value without marking `self` as changed.
     #[inline]
-    pub fn get_mut_unchecked(&mut self) -> &mut T {
-        self.value
+    pub fn get_mut_unchecked(this: &mut Self) -> &mut T {
+        this.value
     }
 }
 
@@ -97,7 +89,9 @@ impl<'w, T> Deref for Mut<'w, T> {
 impl<'w, T> DerefMut for Mut<'w, T> {
     #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
-        self.get_mut()
+        Self::set_changed(self);
+
+        self.value
     }
 }
 
