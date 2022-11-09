@@ -105,6 +105,8 @@ pub struct Added<T> {
     _marker: PhantomData<T>,
 }
 
+#[doc(hidden)]
+#[derive(Debug)]
 pub struct AddedFetch<'w, T: Component> {
     storage: &'w T::Storage,
     last_change_tick: u32,
@@ -181,6 +183,8 @@ pub struct Changed<T> {
     _marker: PhantomData<T>,
 }
 
+#[doc(hidden)]
+#[derive(Debug)]
 pub struct ChangedFetch<'w, T: Component> {
     storage: &'w T::Storage,
     last_change_tick: u32,

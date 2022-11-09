@@ -64,6 +64,7 @@ impl RunCriteria {
     }
 }
 
+#[derive(Debug)]
 pub struct RunCriteriaContainer {
     pub(crate) should_run: ShouldRun,
     pub(crate) criteria: RunCriteria,

@@ -40,6 +40,7 @@ impl<'w> Ticks<'w> {
 }
 
 /// A wrapper that marks the inner type as changed with `T` is mutated.
+#[derive(Debug)]
 pub struct Mut<'w, T> {
     pub(crate) value: &'w mut T,
     pub(crate) ticks: Ticks<'w>,

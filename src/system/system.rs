@@ -13,6 +13,7 @@ use super::{
 
 pub type BoxedSystem<In, Out> = Box<dyn System<In = In, Out = Out>>;
 
+#[derive(Debug)]
 pub struct SystemMeta {
     pub name: Cow<'static, str>,
     pub access: Access<ComponentId>,

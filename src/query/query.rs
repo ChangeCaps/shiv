@@ -5,6 +5,7 @@ use crate::{
 
 use super::{QueryItem, QueryIter, ReadOnlyQueryItem, ReadOnlyWorldQuery, WorldQuery};
 
+#[derive(Debug)]
 pub struct QueryState<Q: WorldQuery, F: ReadOnlyWorldQuery> {
     pub(crate) world_id: WorldId,
     pub(crate) filtered_access: FilteredAccess<ComponentId>,

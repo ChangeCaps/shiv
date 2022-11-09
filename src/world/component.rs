@@ -128,7 +128,7 @@ impl From<usize> for ComponentId {
     }
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct Components {
     components: Vec<ComponentInfo>,
     indices: HashMap<TypeId, usize>,

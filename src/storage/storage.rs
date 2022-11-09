@@ -7,6 +7,7 @@ use crate::{
 
 use super::{DenseStorage, SparseArray};
 
+#[derive(Debug)]
 pub struct StorageSet<T> {
     storage_sets: SparseArray<T>,
 }
@@ -67,7 +68,7 @@ where
     }
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct Storages {
     sparse: StorageSet<DenseStorage>,
 }

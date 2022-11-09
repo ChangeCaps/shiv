@@ -75,12 +75,31 @@ impl Drop for ResourceData {
     }
 }
 
+impl std::fmt::Debug for ResourceData {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ResourceData")
+            .field("data", &self.data)
+            .field("change_ticks", &self.change_ticks)
+            .finish()
+    }
+}
+
 #[derive(Default)]
 pub struct Resources {
     resources: SparseArray<ResourceData>,
 }
 
 impl Resources {
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.resources.iter().count()
+    }
+
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     #[inline]
     pub fn contains(&self, id: ComponentId) -> bool {
         self.resources.contains(id.index())
@@ -111,5 +130,13 @@ impl Resources {
     pub fn get_with_ticks(&self, id: ComponentId) -> Option<(*mut dyn Resource, *mut ChangeTicks)> {
         let data = self.resources.get(id.index())?;
         Some((data.as_ptr(), data.change_ticks.get()))
+    }
+}
+
+impl std::fmt::Debug for Resources {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Resources")
+            .field("len", &self.len())
+            .finish()
     }
 }

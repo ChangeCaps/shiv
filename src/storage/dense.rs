@@ -7,6 +7,7 @@ use crate::{
 
 use super::{Column, ComponentStorage, SparseArray};
 
+#[derive(Debug)]
 pub struct DenseStorage {
     dense: Column,
     entities: Vec<u32>,

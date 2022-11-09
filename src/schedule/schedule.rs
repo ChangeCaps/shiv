@@ -16,7 +16,7 @@ use super::{
 ///
 /// These stages are reserved for use by the [`Schedule`],
 /// and can therefore not be added to the [`Schedule`] manually.
-#[derive(StageLabel)]
+#[derive(Clone, Copy, Debug, StageLabel)]
 pub enum DefaultStage {
     /// Always runs before all other stages.
     ///

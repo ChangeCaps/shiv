@@ -298,6 +298,16 @@ impl World {
     }
 }
 
+impl std::fmt::Debug for World {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("World")
+            .field("entity_count", &self.entities.len())
+            .field("component_count", &self.components.len())
+            .field("resource_count", &self.resources.len())
+            .finish()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{

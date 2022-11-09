@@ -175,6 +175,7 @@ fn assert_access_compatibility(
     );
 }
 
+#[derive(Debug)]
 pub struct Res<'w, T> {
     value: &'w T,
     ticks: &'w ChangeTicks,
@@ -221,6 +222,7 @@ impl<'w, T> AsRef<T> for Res<'w, T> {
 }
 
 #[doc(hidden)]
+#[derive(Debug)]
 pub struct ResState<T> {
     component_id: ComponentId,
     marker: PhantomData<T>,
@@ -281,6 +283,7 @@ impl<'w, T: Resource> SystemParam for Res<'w, T> {
 
 unsafe impl<T: Resource> ReadOnlySystemParamFetch for ResState<T> {}
 
+#[derive(Debug)]
 pub struct ResMut<'w, T> {
     value: &'w mut T,
     ticks: &'w mut ChangeTicks,
@@ -324,6 +327,7 @@ impl<'w, T> DerefMut for ResMut<'w, T> {
 }
 
 #[doc(hidden)]
+#[derive(Debug)]
 pub struct ResMutState<T> {
     component_id: ComponentId,
     marker: PhantomData<T>,
@@ -382,6 +386,7 @@ impl<'w, T: Resource> SystemParam for ResMut<'w, T> {
     type Fetch = ResMutState<T>;
 }
 
+#[derive(Debug)]
 pub struct ResInit<'w, T> {
     value: &'w T,
     ticks: &'w ChangeTicks,
@@ -424,6 +429,7 @@ impl<'w, T> AsRef<T> for ResInit<'w, T> {
 }
 
 #[doc(hidden)]
+#[derive(Debug)]
 pub struct ResInitState<T> {
     component_id: ComponentId,
     marker: PhantomData<T>,
@@ -486,6 +492,7 @@ impl<'w, T: Resource + FromWorld> SystemParam for ResInit<'w, T> {
 
 unsafe impl<T: Resource + FromWorld> ReadOnlySystemParamFetch for ResInitState<T> {}
 
+#[derive(Debug)]
 pub struct ResMutInit<'w, T> {
     value: &'w mut T,
     ticks: &'w mut ChangeTicks,
@@ -528,6 +535,8 @@ impl<'w, T> DerefMut for ResMutInit<'w, T> {
     }
 }
 
+#[doc(hidden)]
+#[derive(Debug)]
 pub struct ResMutInitState<T> {
     component_id: ComponentId,
     marker: PhantomData<T>,
@@ -589,6 +598,7 @@ impl<'w, T: Resource + FromWorld> SystemParam for ResMutInit<'w, T> {
 }
 
 #[doc(hidden)]
+#[derive(Debug)]
 pub struct OptionResState<T>(ResState<T>);
 
 unsafe impl<T: Resource> ReadOnlySystemParamFetch for OptionResState<T> {}
@@ -623,6 +633,7 @@ impl<'w, T: Resource> SystemParam for Option<Res<'w, T>> {
 }
 
 #[doc(hidden)]
+#[derive(Debug)]
 pub struct OptionResMutState<T>(ResMutState<T>);
 
 unsafe impl<T: Resource> SystemParamState for OptionResMutState<T> {
@@ -654,6 +665,7 @@ impl<'w, T: Resource> SystemParam for Option<ResMut<'w, T>> {
     type Fetch = OptionResMutState<T>;
 }
 
+#[derive(Debug)]
 pub struct Local<'s, T: FromWorld + Send + 'static> {
     value: &'s mut T,
 }
@@ -681,6 +693,7 @@ where
 }
 
 #[doc(hidden)]
+#[derive(Debug)]
 pub struct LocalState<T: Send + 'static> {
     value: UnsafeCell<T>,
 }

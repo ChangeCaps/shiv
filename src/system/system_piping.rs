@@ -2,6 +2,7 @@ use crate::world::World;
 
 use super::{IntoSystem, System, SystemMeta};
 
+#[derive(Debug)]
 pub struct PipeSystem<A, B> {
     system_a: A,
     system_b: B,

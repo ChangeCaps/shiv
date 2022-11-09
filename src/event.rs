@@ -199,6 +199,7 @@ impl<E: Event> Events<E> {
     }
 }
 
+#[derive(Debug)]
 pub struct EventReader<'w, 's, E: Event> {
     reader: Local<'s, ManualEventReader<E>>,
     events: Res<'w, Events<E>>,
@@ -231,6 +232,8 @@ impl<'w, 's, E: Event> EventReader<'w, 's, E> {
     }
 }
 
+#[doc(hidden)]
+#[derive(Debug)]
 pub struct EventReaderState<E: Event> {
     reader: LocalState<ManualEventReader<E>>,
     events: ResState<Events<E>>,
@@ -271,6 +274,7 @@ impl<'w, 's, E: Event> SystemParam for EventReader<'w, 's, E> {
     type Fetch = EventReaderState<E>;
 }
 
+#[derive(Debug)]
 pub struct EventWriter<'w, E: Event> {
     events: ResMut<'w, Events<E>>,
 }
@@ -290,6 +294,8 @@ impl<'w, E: Event> EventWriter<'w, E> {
     }
 }
 
+#[doc(hidden)]
+#[derive(Debug)]
 pub struct EventWriterState<E: Event> {
     events: ResMutState<Events<E>>,
 }
@@ -325,6 +331,7 @@ impl<'w, E: Event> SystemParam for EventWriter<'w, E> {
     type Fetch = EventWriterState<E>;
 }
 
+#[derive(Debug)]
 pub struct ManualEventReader<E: Event> {
     last_event_count: usize,
     _marker: PhantomData<E>,

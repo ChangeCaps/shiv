@@ -91,6 +91,8 @@ unsafe impl WorldQuery for Entity {
 
 unsafe impl ReadOnlyWorldQuery for Entity {}
 
+#[doc(hidden)]
+#[derive(Debug)]
 pub struct ReadFetch<'w, T: Component> {
     storage: &'w T::Storage,
 }
@@ -154,6 +156,8 @@ unsafe impl<T: Component> WorldQuery for &T {
 
 unsafe impl<T: Component> ReadOnlyWorldQuery for &T {}
 
+#[doc(hidden)]
+#[derive(Debug)]
 pub struct WriteFetch<'w, T: Component> {
     storage: &'w T::Storage,
     last_change_tick: u32,
@@ -223,6 +227,8 @@ unsafe impl<'a, T: Component> WorldQuery for &'a mut T {
     }
 }
 
+#[doc(hidden)]
+#[derive(Debug)]
 pub struct OptionFetch<'w, T: WorldQuery> {
     fetch: T::Fetch<'w>,
 }

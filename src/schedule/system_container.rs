@@ -2,6 +2,7 @@ use crate::system::{BoxedSystem, System, SystemMeta};
 
 use super::{RunCriteriaContainer, SystemDescriptor, SystemLabelId};
 
+#[derive(Debug)]
 pub struct SystemContainer {
     system: BoxedSystem<(), ()>,
     labels: Vec<SystemLabelId>,
@@ -81,11 +82,5 @@ impl SystemContainer {
     #[inline]
     pub fn after(&self) -> &[SystemLabelId] {
         &self.after
-    }
-}
-
-impl std::fmt::Debug for SystemContainer {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{{{}}}", self.system.meta().name())
     }
 }

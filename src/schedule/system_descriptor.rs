@@ -2,6 +2,7 @@ use crate::system::{BoxedSystem, IntoSystem, System};
 
 use super::{IntoRunCriteria, RunCriteria, SystemLabel, SystemLabelId};
 
+#[derive(Debug)]
 pub struct SystemDescriptor {
     pub system: BoxedSystem<(), ()>,
     pub labels: Vec<SystemLabelId>,

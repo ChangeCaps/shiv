@@ -7,7 +7,7 @@ use crate::{
 
 use super::{Component, Entity, Storage, World};
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct EntityRef<'w> {
     world: &'w World,
     entity: Entity,
@@ -41,6 +41,7 @@ impl<'w> EntityRef<'w> {
     }
 }
 
+#[derive(Debug)]
 pub struct EntityMut<'w> {
     world: &'w mut World,
     entity: Entity,

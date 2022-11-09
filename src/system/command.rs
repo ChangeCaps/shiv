@@ -5,7 +5,7 @@ use crate::{
     world::{Component, Entity, FromWorld, World},
 };
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct CommandQueue {
     queue: Vec<Box<dyn Command>>,
 }
@@ -23,8 +23,21 @@ impl CommandQueue {
 
 pub trait Command: Send + Sync + 'static {
     fn apply(self: Box<Self>, world: &mut World);
+
+    #[inline]
+    fn name(&self) -> &str {
+        std::any::type_name::<Self>()
+    }
 }
 
+impl std::fmt::Debug for dyn Command {
+    #[inline]
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{{command:{}}}", self.name())
+    }
+}
+
+#[derive(Debug)]
 pub struct Commands<'w, 's> {
     queue: &'s mut CommandQueue,
     world: &'w World,
@@ -97,6 +110,7 @@ impl<'w, 's> Commands<'w, 's> {
     }
 }
 
+#[derive(Debug)]
 pub struct EntityCommands<'w, 's, 'a> {
     commands: &'a mut Commands<'w, 's>,
     entity: Entity,
@@ -141,6 +155,7 @@ impl<'w, 's, 'a> EntityCommands<'w, 's, 'a> {
     }
 }
 
+#[derive(Debug)]
 pub struct Insert<T> {
     pub entity: Entity,
     pub component: T,
@@ -152,6 +167,7 @@ impl<T: Component> Command for Insert<T> {
     }
 }
 
+#[derive(Debug)]
 pub struct Remove<T> {
     pub entity: Entity,
     pub marker: PhantomData<T>,
@@ -163,6 +179,7 @@ impl<T: Component> Command for Remove<T> {
     }
 }
 
+#[derive(Debug)]
 pub struct Despawn {
     pub entity: Entity,
 }
@@ -173,6 +190,7 @@ impl Command for Despawn {
     }
 }
 
+#[derive(Debug)]
 pub struct GetOrSpawn {
     entity: Entity,
 }
@@ -183,6 +201,7 @@ impl Command for GetOrSpawn {
     }
 }
 
+#[derive(Debug)]
 pub struct InsertResource<T> {
     resource: T,
 }
@@ -193,6 +212,7 @@ impl<T: Resource> Command for InsertResource<T> {
     }
 }
 
+#[derive(Debug)]
 pub struct RemoveResource<T> {
     marker: PhantomData<T>,
 }
@@ -203,6 +223,7 @@ impl<T: Resource> Command for RemoveResource<T> {
     }
 }
 
+#[derive(Debug)]
 pub struct InitResource<T> {
     marker: PhantomData<T>,
 }

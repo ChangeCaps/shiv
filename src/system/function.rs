@@ -149,8 +149,10 @@ where
 }
 
 #[doc(hidden)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct InputMarker;
 
+#[derive(Debug)]
 pub struct In<T> {
     value: T,
 }
