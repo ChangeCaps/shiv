@@ -10,7 +10,7 @@ use shiv::{
 };
 use shiv_app::{App, Plugin, Plugins};
 use shiv_window::{Window, WindowClosed, WindowCreated, WindowId, WindowPlugin, Windows};
-use wgpu::Surface;
+use wgpu::{Surface, SurfaceConfiguration};
 
 async fn init(
     instance: &wgpu::Instance,
@@ -41,11 +41,31 @@ async fn init(
 }
 
 pub struct WindowSurface {
+    pub config: SurfaceConfiguration,
     surface: Surface,
     window: Arc<dyn Window>,
 }
 
 impl WindowSurface {
+    #[inline]
+    pub fn new(surface: Surface, window: Arc<dyn Window>) -> Self {
+        let (width, height) = window.get_size();
+        let config = SurfaceConfiguration {
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+            format: wgpu::TextureFormat::Bgra8UnormSrgb,
+            width,
+            height,
+            present_mode: wgpu::PresentMode::Fifo,
+            alpha_mode: wgpu::CompositeAlphaMode::Auto,
+        };
+
+        Self {
+            config,
+            surface,
+            window,
+        }
+    }
+
     #[inline]
     pub fn surface(&self) -> &Surface {
         &self.surface
@@ -54,6 +74,11 @@ impl WindowSurface {
     #[inline]
     pub fn window(&self) -> &Arc<dyn Window> {
         &self.window
+    }
+
+    #[inline]
+    pub fn configure(&self, device: &wgpu::Device) {
+        self.surface.configure(device, &self.config);
     }
 }
 
@@ -69,6 +94,7 @@ pub fn maintain_surface_system(
     windows: Res<Windows>,
     instance: Res<wgpu::Instance>,
     adapter: Res<wgpu::Adapter>,
+    device: Res<wgpu::Device>,
 ) {
     for event in created.iter() {
         if surfaces.contains_key(&event.window_id) {
@@ -83,10 +109,8 @@ pub fn maintain_surface_system(
                 "Surface is not supported by the adapter, this is not great news"
             );
 
-            let window_surface = WindowSurface {
-                surface,
-                window: window.clone(),
-            };
+            let window_surface = WindowSurface::new(surface, window.clone());
+            window_surface.configure(&device);
             surfaces.insert(event.window_id, window_surface);
         }
     }
@@ -114,10 +138,8 @@ impl Plugin for WgpuPlugin {
         let surface = unsafe { instance.create_surface(&primary.raw_window_handle()) };
 
         let (adapter, device, queue) = future::block_on(init(&instance, &surface));
-        let window_surface = WindowSurface {
-            surface,
-            window: primary.clone(),
-        };
+        let window_surface = WindowSurface::new(surface, primary.clone());
+        window_surface.configure(&device);
 
         let mut window_surfaces = WindowSurfaces::default();
         window_surfaces.insert(windows.primary_id(), window_surface);

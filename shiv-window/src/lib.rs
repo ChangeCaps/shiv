@@ -17,6 +17,8 @@ impl Plugin for WindowPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<CloseRequested>();
         app.add_event::<RedrawRequested>();
+        app.add_event::<WindowCreated>();
+        app.add_event::<WindowClosed>();
         app.add_event::<WindowResized>();
         app.add_event::<MouseMotion>();
         app.add_event::<KeyInput>();

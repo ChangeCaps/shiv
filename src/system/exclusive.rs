@@ -93,6 +93,11 @@ where
     }
 
     #[inline]
+    fn is_exclusive(&self) -> bool {
+        true
+    }
+
+    #[inline]
     fn init(&mut self, world: &mut World) {
         self.store_last_change_tick();
         self.meta.last_change_tick = self.get_last_change_tick(world);
@@ -122,6 +127,12 @@ where
         );
 
         self.func.run(input, world, param)
+    }
+
+    #[inline]
+    fn apply(&mut self, world: &mut World) {
+        let param_state = self.param_state.as_mut().unwrap();
+        param_state.apply(world);
     }
 }
 

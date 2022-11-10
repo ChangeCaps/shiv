@@ -120,6 +120,7 @@ impl App {
     }
 
     /// Adds `stage` before `before`.
+    #[track_caller]
     pub fn add_stage_after(
         &mut self,
         after: impl StageLabel,
@@ -131,6 +132,7 @@ impl App {
     }
 
     /// Adds `stage` after `after`.
+    #[track_caller]
     pub fn add_stage_before(
         &mut self,
         before: impl StageLabel,
@@ -142,6 +144,7 @@ impl App {
     }
 
     /// Adds `system` to `stage`.
+    #[track_caller]
     pub fn add_system_to_stage<Params>(
         &mut self,
         stage: impl StageLabel,
@@ -152,6 +155,7 @@ impl App {
     }
 
     /// Adds `system` to [`CoreStage::Update`].
+    #[track_caller]
     pub fn add_system<Params>(&mut self, system: impl IntoSystemDescriptor<Params>) -> &mut Self {
         self.add_system_to_stage(CoreStage::Update, system);
         self
@@ -186,12 +190,14 @@ impl App {
     }
 
     /// Adds a [`Stage`] to the [`App`] in startup.
+    #[track_caller]
     pub fn add_startup_stage(&mut self, label: impl StageLabel, stage: impl Stage) -> &mut Self {
         self.startup_schedule().add_stage(label, stage);
         self
     }
 
     /// Adds `stage` before `before` in startup.
+    #[track_caller]
     pub fn add_startup_stage_after(
         &mut self,
         after: impl StageLabel,
@@ -203,6 +209,7 @@ impl App {
     }
 
     /// Adds `stage` after `after` in startup.
+    #[track_caller]
     pub fn add_startup_stage_before(
         &mut self,
         before: impl StageLabel,
@@ -214,6 +221,7 @@ impl App {
     }
 
     /// Adds `system` to `stage` in startup.
+    #[track_caller]
     pub fn add_startup_system_to_stage<Params>(
         &mut self,
         stage: impl StageLabel,
@@ -224,6 +232,7 @@ impl App {
     }
 
     /// Adds `system` to [`StartupStage::Startup`] in startup.
+    #[track_caller]
     pub fn add_startup_system<Params>(
         &mut self,
         system: impl IntoSystemDescriptor<Params>,
@@ -241,6 +250,7 @@ impl App {
     /// Adds an [`Event`] to [`App::schedule`].
     pub fn add_event<T: Event>(&mut self) -> &mut Self {
         self.schedule.add_event::<T>();
+        self.init_resource::<Events<T>>();
         self
     }
 
