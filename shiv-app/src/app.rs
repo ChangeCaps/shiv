@@ -237,7 +237,7 @@ impl App {
         &mut self,
         system: impl IntoSystemDescriptor<Params>,
     ) -> &mut Self {
-        self.add_startup_system_to_stage(CoreStage::Update, system);
+        self.add_startup_system_to_stage(StartupStage::Startup, system);
         self
     }
 

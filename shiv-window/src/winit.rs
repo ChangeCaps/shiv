@@ -309,15 +309,15 @@ impl AppRunner for WinitRunner {
             Event::RedrawRequested(id) => {
                 let window_id = window_ids[&id];
                 app.send_event(RedrawRequested { window_id });
+            }
+            Event::MainEventsCleared => {
                 app.update();
 
                 if app.exit_requested() {
                     *control_flow = ControlFlow::Exit;
                 }
-            }
-            Event::RedrawEventsCleared => {
-                let windows = app.world.resource::<Windows>();
 
+                let windows = app.world.resource::<Windows>();
                 for window in windows.values() {
                     window.request_redraw();
                 }

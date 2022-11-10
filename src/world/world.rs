@@ -251,23 +251,27 @@ impl World {
     #[inline]
     #[track_caller]
     pub fn entity(&self, entity: Entity) -> EntityRef<'_> {
-        self.get_entity(entity).unwrap_or_else(|| {
+        if let Some(entity) = self.get_entity(entity) {
+            entity
+        } else {
             panic!(
                 "Attempting to create EntityRef for entity {}, which does not exist.",
                 entity,
             )
-        })
+        }
     }
 
     #[inline]
     #[track_caller]
     pub fn entity_mut(&mut self, entity: Entity) -> EntityMut<'_> {
-        self.get_entity_mut(entity).unwrap_or_else(|| {
+        if let Some(entity) = self.get_entity_mut(entity) {
+            entity
+        } else {
             panic!(
                 "Attempting to create EntityMut for entity {}, which does not exist.",
                 entity,
             )
-        })
+        }
     }
 }
 

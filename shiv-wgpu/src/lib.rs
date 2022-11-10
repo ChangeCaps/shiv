@@ -9,7 +9,9 @@ use shiv::{
     system::{Res, ResMut},
 };
 use shiv_app::{App, Plugin, Plugins};
-use shiv_window::{Window, WindowClosed, WindowCreated, WindowId, WindowPlugin, Windows};
+use shiv_window::{
+    Window, WindowClosed, WindowCreated, WindowId, WindowPlugin, WindowResized, Windows,
+};
 use wgpu::{Surface, SurfaceConfiguration};
 
 async fn init(
@@ -90,6 +92,7 @@ pub struct WindowSurfaces {
 pub fn maintain_surface_system(
     mut created: EventReader<WindowCreated>,
     mut closed: EventReader<WindowClosed>,
+    mut resized: EventReader<WindowResized>,
     mut surfaces: ResMut<WindowSurfaces>,
     windows: Res<Windows>,
     instance: Res<wgpu::Instance>,
@@ -117,6 +120,14 @@ pub fn maintain_surface_system(
 
     for event in closed.iter() {
         surfaces.remove(&event.window_id);
+    }
+
+    for event in resized.iter() {
+        if let Some(window_surface) = surfaces.get_mut(&event.window_id) {
+            window_surface.config.width = event.width;
+            window_surface.config.height = event.height;
+            window_surface.configure(&device);
+        }
     }
 }
 
