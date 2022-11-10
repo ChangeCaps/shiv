@@ -1,15 +1,18 @@
 [package]
-name = "shiv-app"
+name = "shiv-wgpu"
 version = "0.1.0-alpha3"
 edition = "2021"
-description = "A simple framework for building apps with shiv"
+description = "Wgpu bindings for shiv"
 repository = "https://github.com/ChangeCaps/shiv"
 license = "MIT OR Apache-2.0"
-readme = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 shiv = { path = "..", version = "0.1.0-alpha3" }
+shiv-app = { path = "../shiv-app", version = "0.1.0-alpha3" }
+shiv-window = { path = "../shiv-window", version = "0.1.0-alpha3" }
 
-downcast-rs = "1.2"
+deref-derive = "0.1"
+futures-lite = "1.12"
+wgpu = "0.14"

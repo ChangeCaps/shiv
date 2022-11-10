@@ -7,6 +7,7 @@ use std::{
 };
 
 use crate::{
+    schedule::{SystemLabel, SystemLabelId},
     system::{
         Local, LocalState, ReadOnlySystemParamFetch, Res, ResMut, ResMutInit, ResMutState,
         ResState, SystemMeta, SystemParam, SystemParamFetch, SystemParamState,
@@ -119,6 +120,27 @@ impl<E: Event> DerefMut for EventSequence<E> {
     #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.events
+    }
+}
+
+/// A [`SystemLabel`] for [`Event::update_system`].
+pub struct UpdateEventsSystem<T: Event> {
+    _marker: PhantomData<T>,
+}
+
+impl<T: Event> UpdateEventsSystem<T> {
+    #[inline]
+    pub const fn new() -> Self {
+        UpdateEventsSystem {
+            _marker: PhantomData,
+        }
+    }
+}
+
+impl<T: Event> SystemLabel for UpdateEventsSystem<T> {
+    #[inline]
+    fn label(self) -> SystemLabelId {
+        SystemLabelId::from_raw_parts::<Self>(std::any::type_name::<Self>(), 0)
     }
 }
 

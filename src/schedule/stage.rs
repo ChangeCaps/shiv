@@ -10,7 +10,7 @@ use crate::{
 
 use super::{
     IntoRunCriteria, IntoSystemDescriptor, ParallelExecutor, RunCriteria, SequentialExecutor,
-    ShouldRun, SystemContainer, SystemExecutor,
+    ShouldRun, SystemContainer, SystemExecutor, SystemLabel,
 };
 
 pub trait Stage: Downcast + Send + Sync {
@@ -80,6 +80,13 @@ impl SystemStage {
     pub fn with_system<Params>(mut self, system: impl IntoSystemDescriptor<Params>) -> Self {
         self.add_system(system);
         self
+    }
+
+    pub fn has_system(&self, label: impl SystemLabel) -> bool {
+        let label = label.label();
+        self.parallel_systems
+            .iter()
+            .any(|system| system.labels().contains(&label))
     }
 
     pub fn set_run_criteria<Marker>(&mut self, run_criteria: impl IntoRunCriteria<Marker>) {

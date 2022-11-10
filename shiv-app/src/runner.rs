@@ -1,6 +1,4 @@
-use shiv::prelude::Events;
-
-use crate::{App, AppExit};
+use crate::App;
 
 pub trait AppRunner: 'static {
     fn run(self: Box<Self>, app: App);
@@ -19,12 +17,10 @@ pub struct RunLoop;
 impl AppRunner for RunLoop {
     fn run(self: Box<Self>, mut app: App) {
         loop {
-            app.schedule.run_once(&mut app.world);
+            app.update();
 
-            if let Some(events) = app.world.get_resource::<Events<AppExit>>() {
-                if !events.is_empty() {
-                    break;
-                }
+            if app.exit_requested() {
+                break;
             }
         }
     }

@@ -1,11 +1,12 @@
 use std::mem;
 
-use crate::{AppRunner, Plugin, RunOnce};
+use crate::{AppRunner, Plugin, Plugins, RunOnce};
 
 use shiv::{
-    prelude::Event,
+    prelude::{Event, Events},
     schedule::{IntoSystemDescriptor, Schedule, ShouldRun, Stage, StageLabel, SystemStage},
-    world::World,
+    storage::Resource,
+    world::{FromWorld, World},
 };
 
 /// An event that when emitted will tell the [`App`] to exit.
@@ -41,6 +42,7 @@ pub struct App {
     pub world: World,
     pub schedule: Schedule,
     pub runner: Box<dyn AppRunner>,
+    pub plugins: Plugins,
 }
 
 impl Default for App {
@@ -56,6 +58,7 @@ impl App {
             world: World::new(),
             schedule: Schedule::new(),
             runner: Box::new(RunOnce),
+            plugins: Plugins::new(),
         }
     }
 
@@ -81,9 +84,33 @@ impl App {
         app
     }
 
+    /// Adds a [`Plugin`] to the [`App`].
     pub fn add_plugin(&mut self, plugin: impl Plugin) -> &mut Self {
-        plugin.build(self);
+        let index = self.plugins.len();
+        self.plugins.add(plugin);
+
+        let plugins = mem::take(&mut self.plugins);
+        plugins.build_range(self, index..plugins.len());
+        self.plugins = plugins;
+
         self
+    }
+
+    /// Initializes a [`Resource`] in [`App::world`].
+    pub fn init_resource<T: Resource + FromWorld>(&mut self) -> &mut Self {
+        self.world.init_resource::<T>();
+        self
+    }
+
+    /// Inserts a [`Resource`] into [`App::world`].
+    pub fn insert_resource<T: Resource>(&mut self, resource: T) -> &mut Self {
+        self.world.insert_resource(resource);
+        self
+    }
+
+    /// Removes a [`Resource`] from [`App::world`].
+    pub fn remove_resource<T: Resource>(&mut self) -> Option<T> {
+        self.world.remove_resource::<T>()
     }
 
     /// Adds a [`Stage`] to the [`App`].
@@ -206,14 +233,42 @@ impl App {
     }
 
     /// Sets the [`AppRunner`].
-    pub fn add_runner(&mut self, runner: impl AppRunner) -> &mut Self {
+    pub fn set_runner(&mut self, runner: impl AppRunner) -> &mut Self {
         self.runner = Box::new(runner);
         self
     }
 
+    /// Adds an [`Event`] to [`App::schedule`].
     pub fn add_event<T: Event>(&mut self) -> &mut Self {
         self.schedule.add_event::<T>();
         self
+    }
+
+    /// Sends an [`Event`] in [`App::world`].
+    pub fn send_event<T: Event>(&mut self, event: T) -> &mut Self {
+        if let Some(mut events) = self.world.get_resource_mut::<Events<T>>() {
+            events.send(event);
+        } else {
+            self.add_event::<T>();
+            self.world.resource_mut::<Events<T>>().send(event);
+        }
+
+        self
+    }
+
+    /// Shorthand for `app.shedule.run(&mut app.world);`.
+    pub fn update(&mut self) -> &mut Self {
+        self.schedule.run(&mut self.world);
+        self
+    }
+
+    /// Returns `true` if an [`AppExit`] event has been sent.
+    pub fn exit_requested(&self) -> bool {
+        if let Some(events) = self.world.get_resource::<Events<AppExit>>() {
+            !events.is_empty()
+        } else {
+            false
+        }
     }
 
     /// Runs the [`App`].

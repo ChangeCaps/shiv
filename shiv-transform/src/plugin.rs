@@ -5,7 +5,7 @@ use shiv::{
     system::Commands,
     world::{Component, Entity},
 };
-use shiv_app::{App, CoreStage, Plugin, StartupStage};
+use shiv_app::{App, CoreStage, Plugin, Plugins, StartupStage};
 
 use crate::{Children, GlobalTransform, Parent, Transform};
 
@@ -152,14 +152,27 @@ pub enum TransformSystem {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct TransformPlugin;
+pub struct HiracyPlugin;
 
-impl Plugin for TransformPlugin {
+impl Plugin for HiracyPlugin {
     fn build(&self, app: &mut App) {
         app.add_startup_system_to_stage(
             StartupStage::PostStartup,
             update_parent_system.label(TransformSystem::UpdateParent),
         );
+
+        app.add_system_to_stage(
+            CoreStage::PostUpdate,
+            update_parent_system.label(TransformSystem::UpdateParent),
+        );
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+pub struct TransformPlugin;
+
+impl Plugin for TransformPlugin {
+    fn build(&self, app: &mut App) {
         app.add_startup_system_to_stage(
             StartupStage::PostStartup,
             update_transform_system
@@ -167,10 +180,6 @@ impl Plugin for TransformPlugin {
                 .after(TransformSystem::UpdateParent),
         );
 
-        app.add_system_to_stage(
-            CoreStage::PostUpdate,
-            update_parent_system.label(TransformSystem::UpdateParent),
-        );
         app.add_system_to_stage(
             CoreStage::PostUpdate,
             update_transform_system
@@ -178,18 +187,8 @@ impl Plugin for TransformPlugin {
                 .after(TransformSystem::UpdateParent),
         );
     }
-}
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use shiv_app::{App, RunOnce};
-
-    #[test]
-    fn system_access() {
-        App::new()
-            .add_plugin(TransformPlugin)
-            .add_runner(RunOnce)
-            .run();
+    fn dependencies(&self, plugins: &mut Plugins) {
+        plugins.add(HiracyPlugin);
     }
 }
