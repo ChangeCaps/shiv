@@ -1,5 +1,7 @@
 mod access;
 mod command;
+mod exclusive;
+mod exclusive_param;
 mod function;
 mod param;
 mod system;
@@ -7,6 +9,8 @@ mod system_piping;
 
 pub use access::*;
 pub use command::*;
+pub use exclusive::*;
+pub use exclusive_param::*;
 pub use function::*;
 pub use param::*;
 pub use system::*;

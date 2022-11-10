@@ -122,7 +122,7 @@ where
     }
 
     #[inline]
-    unsafe fn run(&mut self, input: Self::In, world: &World) -> Self::Out {
+    unsafe fn run_unchecked(&mut self, input: Self::In, world: &World) -> Self::Out {
         let change_tick = world.increment_change_tick();
 
         let params = unsafe {
@@ -139,6 +139,15 @@ where
         self.meta.last_change_tick = change_tick;
 
         out
+    }
+
+    #[inline]
+    fn run(&mut self, input: Self::In, world: &mut World) -> Self::Out {
+        if self.world_id != Some(world.id()) {
+            self.init(world);
+        }
+
+        unsafe { self.run_unchecked(input, world) }
     }
 
     #[inline]
@@ -264,7 +273,7 @@ mod tests {
         let mut system = test_system.into_system();
 
         system.init(&mut world);
-        unsafe { system.run((), &mut world) };
+        unsafe { system.run_unchecked((), &mut world) };
         system.apply(&mut world);
     }
 }

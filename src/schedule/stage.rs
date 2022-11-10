@@ -34,7 +34,9 @@ pub struct SystemStage {
     world_id: Option<WorldId>,
     executor: Box<dyn SystemExecutor>,
     run_criteria: RunCriteria,
+    exclusive_systems: Vec<SystemContainer>,
     parallel_systems: Vec<SystemContainer>,
+    uninitialized_exclusive: Vec<usize>,
     uninitialized_parallel: Vec<usize>,
     systems_modified: bool,
     executor_modified: bool,
@@ -46,7 +48,9 @@ impl SystemStage {
             world_id: None,
             executor: Box::new(executor),
             run_criteria: RunCriteria::default(),
+            exclusive_systems: Vec::new(),
             parallel_systems: Vec::new(),
+            uninitialized_exclusive: Vec::new(),
             uninitialized_parallel: Vec::new(),
             systems_modified: true,
             executor_modified: true,
@@ -69,9 +73,15 @@ impl SystemStage {
         let descriptor = system.into_descriptor();
         let container = SystemContainer::from_descriptor(descriptor);
 
-        let index = self.parallel_systems.len();
-        self.parallel_systems.push(container);
-        self.uninitialized_parallel.push(index);
+        if container.system().is_exclusive() {
+            let index = self.exclusive_systems.len();
+            self.exclusive_systems.push(container);
+            self.uninitialized_exclusive.push(index);
+        } else {
+            let index = self.parallel_systems.len();
+            self.parallel_systems.push(container);
+            self.uninitialized_parallel.push(index);
+        }
 
         self.systems_modified = true;
     }
@@ -84,9 +94,19 @@ impl SystemStage {
 
     pub fn has_system(&self, label: impl SystemLabel) -> bool {
         let label = label.label();
+        self.has_exclusive_system(&label) || self.has_parallel_system(&label)
+    }
+
+    fn has_exclusive_system(&self, label: &SystemLabelId) -> bool {
+        self.exclusive_systems
+            .iter()
+            .any(|system| system.labels().contains(label))
+    }
+
+    fn has_parallel_system(&self, label: &SystemLabelId) -> bool {
         self.parallel_systems
             .iter()
-            .any(|system| system.labels().contains(&label))
+            .any(|system| system.labels().contains(label))
     }
 
     pub fn set_run_criteria<Marker>(&mut self, run_criteria: impl IntoRunCriteria<Marker>) {
@@ -101,6 +121,9 @@ impl SystemStage {
 
     pub fn apply_buffers(&mut self, world: &mut World) {
         for container in self.parallel_systems.iter_mut() {
+            #[cfg(feature = "tracing")]
+            let _guard = tracing::info_span!("apply", name = container.name()).entered();
+
             container.system_mut().apply(world);
         }
     }
@@ -123,6 +146,11 @@ impl SystemStage {
     }
 
     fn initialize_systems(&mut self, world: &mut World) {
+        for index in self.uninitialized_exclusive.drain(..) {
+            let container = &mut self.exclusive_systems[index];
+            container.system_mut().init(world);
+        }
+
         for index in self.uninitialized_parallel.drain(..) {
             let container = &mut self.parallel_systems[index];
             container.system_mut().init(world);
@@ -130,21 +158,33 @@ impl SystemStage {
     }
 
     fn reinitialize_systems(&mut self, world: &mut World) {
+        for container in self.exclusive_systems.iter_mut() {
+            container.system_mut().init(world);
+        }
+
         for container in self.parallel_systems.iter_mut() {
             container.system_mut().init(world);
         }
+
+        self.uninitialized_exclusive.clear();
+        self.uninitialized_parallel.clear();
     }
 
     fn check_change_ticks(&mut self, world: &World) {
         let change_tick = world.change_tick();
 
-        for parallel_system in self.parallel_systems.iter_mut() {
-            parallel_system.system_mut().check_change_tick(change_tick);
+        for container in self.exclusive_systems.iter_mut() {
+            container.system_mut().check_change_tick(change_tick);
+        }
+
+        for container in self.parallel_systems.iter_mut() {
+            container.system_mut().check_change_tick(change_tick);
         }
     }
 
     fn rebuild_systems(&mut self) {
         Self::rebuild_dependency_graph(&mut self.parallel_systems);
+        Self::rebuild_dependency_graph(&mut self.exclusive_systems);
     }
 
     fn rebuild_dependency_graph(systems: &mut Vec<SystemContainer>) {
@@ -260,6 +300,10 @@ impl Stage for SystemStage {
             self.executor.systems_changed(&self.parallel_systems);
         }
 
+        for container in self.exclusive_systems.iter_mut() {
+            container.run_criteria_mut().run(world);
+        }
+
         for container in self.parallel_systems.iter_mut() {
             container.run_criteria_mut().run(world);
         }
@@ -269,6 +313,20 @@ impl Stage for SystemStage {
         unsafe { self.executor.run_systems(&mut self.parallel_systems, world) };
 
         self.apply_buffers(world);
+
+        for container in self.exclusive_systems.iter_mut() {
+            if container.should_run() {
+                #[cfg(feature = "tracing")]
+                let guard = tracing::info_span!("system", system = container.name()).entered();
+                container.system_mut().run((), world);
+                #[cfg(feature = "tracing")]
+                drop(guard);
+
+                #[cfg(feature = "tracing")]
+                let _guard = tracing::info_span!("apply", system = container.name()).entered();
+                container.system_mut().apply(world);
+            }
+        }
 
         self.check_change_ticks(world);
     }

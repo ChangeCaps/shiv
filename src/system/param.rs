@@ -667,7 +667,7 @@ impl<'w, T: Resource> SystemParam for Option<ResMut<'w, T>> {
 
 #[derive(Debug)]
 pub struct Local<'s, T: FromWorld + Send + 'static> {
-    value: &'s mut T,
+    pub(crate) value: &'s mut T,
 }
 
 impl<'s, T> Deref for Local<'s, T>

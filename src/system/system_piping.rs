@@ -30,9 +30,18 @@ where
         self.system_b.init(world);
     }
 
-    unsafe fn run(&mut self, input: Self::In, world: &World) -> Self::Out {
-        let payload = unsafe { self.system_a.run(input, world) };
-        let out = unsafe { self.system_b.run(payload, world) };
+    unsafe fn run_unchecked(&mut self, input: Self::In, world: &World) -> Self::Out {
+        let payload = unsafe { self.system_a.run_unchecked(input, world) };
+        let out = unsafe { self.system_b.run_unchecked(payload, world) };
+
+        self.meta.last_change_tick = self.system_a.meta().last_change_tick;
+
+        out
+    }
+
+    fn run(&mut self, input: Self::In, world: &mut World) -> Self::Out {
+        let payload = self.system_a.run(input, world);
+        let out = self.system_b.run(payload, world);
 
         self.meta.last_change_tick = self.system_a.meta().last_change_tick;
 
@@ -111,7 +120,7 @@ mod tests {
         let mut system = a.pipe(b);
 
         system.init(&mut world);
-        let out = unsafe { system.run((), &world) };
+        let out = unsafe { system.run_unchecked((), &world) };
         system.apply(&mut world);
 
         assert_eq!(out, 9.0);

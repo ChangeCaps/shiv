@@ -172,15 +172,25 @@ pub trait System: Send + Sync + 'static {
     /// - `SystemMeta::access` must not be modified
     unsafe fn meta_mut(&mut self) -> &mut SystemMeta;
 
+    #[inline]
+    fn is_exclusive(&self) -> bool {
+        false
+    }
+
+    #[inline]
     fn init(&mut self, _world: &mut World) {}
 
     /// # Safety
     /// - `world` must be the same world that was used to [`System::init`] this system.
     /// - This doesn't check borrow rules, so it's up to the caller to that access is correct.
-    unsafe fn run(&mut self, input: Self::In, world: &World) -> Self::Out;
+    unsafe fn run_unchecked(&mut self, input: Self::In, world: &World) -> Self::Out;
 
+    fn run(&mut self, input: Self::In, world: &mut World) -> Self::Out;
+
+    #[inline]
     fn apply(&mut self, _world: &mut World) {}
 
+    #[inline]
     fn check_change_tick(&mut self, change_tick: u32) {
         // SAFETY: `SystemMeta::access` is not modified
         let meta = unsafe { self.meta_mut() };
@@ -192,6 +202,7 @@ pub trait System: Send + Sync + 'static {
         }
     }
 
+    #[inline]
     fn set_last_change_tick(&mut self, last_change_tick: u32) {
         // SAFETY: `SystemMeta::access` is not modified
         let meta = unsafe { self.meta_mut() };

@@ -106,7 +106,7 @@ impl ParallelExecutor {
                     #[cfg(feature = "tracing")]
                     let _guard = system_span.enter();
 
-                    unsafe { system.system_mut().run((), world) };
+                    unsafe { system.system_mut().run_unchecked((), world) };
                     finished_sender.send(index).await.unwrap();
                 };
 
@@ -125,7 +125,7 @@ impl ParallelExecutor {
                     #[cfg(feature = "tracing")]
                     let _guard = system_span.enter();
 
-                    unsafe { system.system_mut().run((), world) };
+                    unsafe { system.system_mut().run_unchecked((), world) };
                     finished_sender.send(index).await.unwrap();
                 };
 

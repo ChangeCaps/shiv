@@ -43,7 +43,7 @@ impl SystemExecutor for SequentialExecutor {
                 // so no two systems will be run at the same time
                 // - we know that `world` is the same world that
                 // each system was initialized with (see `SystemExecutor::run_systems`)
-                unsafe { system.system_mut().run((), world) };
+                unsafe { system.system_mut().run_unchecked((), world) };
             }
         }
     }

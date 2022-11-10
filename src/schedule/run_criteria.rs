@@ -57,7 +57,7 @@ impl RunCriteria {
             // SAFETY:
             // - world has been validated above
             // - world is borrowed mutably
-            unsafe { criteria.run((), world) }
+            unsafe { criteria.run_unchecked((), world) }
         } else {
             ShouldRun::Yes
         }
