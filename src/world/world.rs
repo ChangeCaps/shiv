@@ -1,9 +1,10 @@
 use std::sync::atomic::{AtomicU32, Ordering};
 
 use crate::{
+    bundle::Bundles,
     change_detection::{Mut, Ticks},
     query::{QueryState, ReadOnlyWorldQuery, WorldQuery},
-    storage::{Resource, Resources, Storages},
+    storage::{Resource, Storages},
     world::Entities,
 };
 
@@ -39,8 +40,8 @@ pub struct World {
     id: WorldId,
     pub(crate) entities: Entities,
     pub(crate) storage: Storages,
+    pub(crate) bundles: Bundles,
     pub(crate) components: Components,
-    pub(crate) resources: Resources,
     pub(crate) change_tick: AtomicU32,
     pub(crate) last_change_tick: u32,
 }
@@ -55,8 +56,8 @@ impl Default for World {
             id: WorldId::new(),
             entities: Entities::default(),
             storage: Storages::default(),
+            bundles: Bundles::default(),
             components: Components::default(),
-            resources: Resources::default(),
             change_tick: AtomicU32::new(1),
             last_change_tick: 0,
         }
@@ -128,7 +129,7 @@ impl World {
     #[inline]
     pub fn contains_resource<T: Resource>(&self) -> bool {
         if let Some(id) = self.components.get_resource::<T>() {
-            self.resources.contains(id)
+            self.storage.resources.contains(id)
         } else {
             false
         }
@@ -139,7 +140,8 @@ impl World {
         let id = self.components.init_resource::<T>();
 
         unsafe {
-            self.resources
+            self.storage
+                .resources
                 .insert(id, Box::new(resource), self.change_tick())
         };
     }
@@ -155,21 +157,21 @@ impl World {
     #[inline]
     pub fn remove_resource<T: Resource>(&mut self) -> Option<T> {
         let id = self.components.init_resource::<T>();
-        let resource = self.resources.remove(id)?;
+        let resource = self.storage.resources.remove(id)?;
         unsafe { Some(*Box::from_raw(resource as *mut T)) }
     }
 
     #[inline]
     pub fn get_resource<T: Resource>(&self) -> Option<&T> {
         let id = self.components.get_resource::<T>()?;
-        let resource = self.resources.get(id)?;
+        let resource = self.storage.resources.get(id)?;
         unsafe { Some(&*(resource as *mut T)) }
     }
 
     #[inline]
     pub fn get_resource_mut<T: Resource>(&mut self) -> Option<Mut<T>> {
         let id = self.components.get_resource::<T>()?;
-        let (resource, change_ticks) = self.resources.get_with_ticks(id)?;
+        let (resource, change_ticks) = self.storage.resources.get_with_ticks(id)?;
 
         Some(Mut {
             value: unsafe { &mut *(resource as *mut T) },
@@ -315,13 +317,15 @@ impl std::fmt::Debug for World {
         f.debug_struct("World")
             .field("entity_count", &self.entities.len())
             .field("component_count", &self.components.len())
-            .field("resource_count", &self.resources.len())
+            .field("resource_count", &self.storage.resources.len())
             .finish()
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use shiv_macro::Bundle;
+
     use crate::{
         query::{With, Without},
         storage::DenseStorage,
@@ -514,5 +518,30 @@ mod tests {
         assert_eq!(iter.next().unwrap(), (&3, Some(&true)));
         assert_eq!(iter.next().unwrap(), (&4, None));
         assert!(iter.next().is_none());
+    }
+
+    #[test]
+    fn bundle() {
+        use crate as shiv;
+
+        #[derive(Bundle)]
+        struct TestBundle {
+            a: i32,
+            b: bool,
+        }
+
+        let bundle = TestBundle { a: 2, b: true };
+
+        let mut world = World::new();
+        let mut entity = world.spawn();
+        entity.insert(bundle);
+
+        assert_eq!(entity.get::<i32>().unwrap(), &2);
+        assert_eq!(entity.get::<bool>().unwrap(), &true);
+
+        let bundle = entity.remove::<TestBundle>().unwrap();
+
+        assert_eq!(bundle.a, 2);
+        assert_eq!(bundle.b, true);
     }
 }

@@ -1,8 +1,12 @@
-use std::{alloc::Layout, any::TypeId};
+use std::{
+    alloc::Layout,
+    any::{self, TypeId},
+    borrow::Cow,
+};
 
 use crate::{
     hash_map::HashMap,
-    storage::{ComponentStorage, DenseStorage, Resource, StorageSet, Storages},
+    storage::{ComponentStorage, DenseStorage, Resource, StorageSet, StorageType, Storages},
 };
 
 pub use shiv_macro::Component;
@@ -12,42 +16,63 @@ pub trait Component: Send + Sync + 'static {
 }
 
 pub trait Storage: ComponentStorage + Sized {
+    const STORAGE_TYPE: StorageType;
+
     fn get(storage: &Storages) -> &StorageSet<Self>;
     fn get_mut(storage: &mut Storages) -> &mut StorageSet<Self>;
 }
 
 impl Storage for DenseStorage {
+    const STORAGE_TYPE: StorageType = StorageType::Dense;
+
     #[inline]
     fn get(storage: &Storages) -> &StorageSet<Self> {
-        storage.sparse()
+        &storage.dense
     }
 
     #[inline]
     fn get_mut(storage: &mut Storages) -> &mut StorageSet<Self> {
-        storage.sparse_mut()
+        &mut storage.dense
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub struct ComponentDescriptor {
-    name: &'static str,
+    name: Cow<'static, str>,
+    storage_type: StorageType,
     layout: Layout,
     drop: Option<unsafe fn(*mut u8)>,
 }
 
 impl ComponentDescriptor {
     #[inline]
-    pub fn new<T>() -> Self {
+    pub fn new<T: Component>() -> Self {
         Self {
-            name: std::any::type_name::<T>(),
+            name: Cow::Borrowed(any::type_name::<T>()),
+            storage_type: T::Storage::STORAGE_TYPE,
             layout: Layout::new::<T>(),
             drop: Some(|ptr| unsafe { std::ptr::drop_in_place(ptr as *mut T) }),
         }
     }
 
     #[inline]
-    pub const fn name(&self) -> &'static str {
-        self.name
+    pub fn new_resource<T: Resource>() -> Self {
+        Self {
+            name: Cow::Borrowed(any::type_name::<T>()),
+            storage_type: StorageType::Dense,
+            layout: Layout::new::<T>(),
+            drop: Some(|ptr| unsafe { std::ptr::drop_in_place(ptr as *mut T) }),
+        }
+    }
+
+    #[inline]
+    pub fn name(&self) -> &str {
+        self.name.as_ref()
+    }
+
+    #[inline]
+    pub const fn storage_type(&self) -> StorageType {
+        self.storage_type
     }
 
     #[inline]
@@ -79,8 +104,13 @@ impl ComponentInfo {
     }
 
     #[inline]
-    pub const fn name(&self) -> &'static str {
+    pub fn name(&self) -> &str {
         self.descriptor.name()
+    }
+
+    #[inline]
+    pub const fn storage_type(&self) -> StorageType {
+        self.descriptor.storage_type()
     }
 
     #[inline]
@@ -170,7 +200,7 @@ impl Components {
         let index = self.components.len();
         self.components.push(ComponentInfo::new(
             ComponentId::new(index),
-            ComponentDescriptor::new::<T>(),
+            ComponentDescriptor::new_resource::<T>(),
         ));
         self.resource_indices.insert(type_id, index);
 

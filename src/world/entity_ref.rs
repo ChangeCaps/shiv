@@ -1,6 +1,5 @@
-use std::mem::{self, MaybeUninit};
-
 use crate::{
+    bundle::Bundle,
     change_detection::{Mut, Ticks},
     storage::ComponentStorage,
 };
@@ -123,40 +122,39 @@ impl<'w> EntityMut<'w> {
     }
 
     #[inline]
-    pub fn insert<T: Component>(&mut self, mut component: T) -> &mut Self {
-        let id = self.world.init_component::<T>();
-
+    pub fn insert<T: Bundle>(&mut self, bundle: T) -> &mut Self {
         let change_tick = self.world.change_tick();
-
-        let storage_sets = <T::Storage as Storage>::get_mut(&mut self.world.storage);
-        let storage = unsafe { storage_sets.get_unchecked_mut(id) };
+        let bundle_info = self
+            .world
+            .bundles
+            .init_bundle::<T>(&mut self.world.components);
 
         unsafe {
-            storage.insert(
+            bundle_info.insert(
                 self.entity,
-                &mut component as *mut T as *mut u8,
+                bundle,
+                &mut self.world.components,
+                &mut self.world.storage,
                 change_tick,
             )
         };
-
-        mem::forget(component);
 
         self
     }
 
     #[inline]
-    pub fn remove<T: Component>(&mut self) -> Option<T> {
-        let id = self.world.init_component::<T>();
+    pub fn remove<T: Bundle>(&mut self) -> Option<T> {
+        let bundle_info = self
+            .world
+            .bundles
+            .init_bundle::<T>(&mut self.world.components);
 
-        let storage_sets = <T::Storage as Storage>::get_mut(&mut self.world.storage);
-        let storage = unsafe { storage_sets.get_unchecked_mut(id) };
-
-        if !storage.contains(self.entity) {
-            return None;
+        unsafe {
+            bundle_info.remove::<T>(
+                self.entity,
+                &mut self.world.components,
+                &mut self.world.storage,
+            )
         }
-
-        let mut component = MaybeUninit::<T>::uninit();
-        unsafe { storage.remove_unchecked(self.entity, component.as_mut_ptr() as *mut u8) }
-        Some(unsafe { component.assume_init() })
     }
 }

@@ -2,6 +2,7 @@
 
 //! A simple modern Entity Component System (ECS).
 
+pub mod bundle;
 pub mod change_detection;
 pub mod event;
 pub mod hash_map;

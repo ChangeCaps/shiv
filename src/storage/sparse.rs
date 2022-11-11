@@ -46,6 +46,17 @@ impl<T> SparseArray<T> {
         }
     }
 
+    pub fn get_or_insert_with<F>(&mut self, index: usize, f: F) -> &mut T
+    where
+        F: FnOnce() -> T,
+    {
+        if !self.contains(index) {
+            self.insert(index, f());
+        }
+
+        unsafe { self.get_unchecked_mut(index) }
+    }
+
     #[inline]
     pub fn get_or_default(&mut self, index: usize) -> &mut T
     where

@@ -5,7 +5,7 @@ use crate::{
     world::{ComponentDescriptor, ComponentId, ComponentInfo, Entity, EntityIdSet},
 };
 
-use super::{DenseStorage, SparseArray};
+use super::{DenseStorage, Resources, SparseArray};
 
 #[derive(Debug)]
 pub struct StorageSet<T> {
@@ -45,10 +45,16 @@ where
         unsafe { self.storage_sets.get_unchecked_mut(id.index()) }
     }
 
+    pub fn get_or_init(&mut self, info: &ComponentInfo) -> &mut T {
+        self.storage_sets.get_or_insert_with(info.id.index(), || {
+            ComponentStorage::new(info.descriptor.clone(), 0)
+        })
+    }
+
     #[inline]
     pub fn initialize(&mut self, info: &ComponentInfo) {
         if !self.storage_sets.contains(info.id().index()) {
-            let set = ComponentStorage::new(*info.descriptor(), 0);
+            let set = ComponentStorage::new(info.descriptor().clone(), 0);
             self.storage_sets.insert(info.id().index(), set);
         }
     }
@@ -68,30 +74,27 @@ where
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum StorageType {
+    Dense,
+    Resource,
+}
+
 #[derive(Debug, Default)]
 pub struct Storages {
-    sparse: StorageSet<DenseStorage>,
+    pub dense: StorageSet<DenseStorage>,
+    pub resources: Resources,
 }
 
 impl Storages {
     #[inline]
-    pub fn sparse(&self) -> &StorageSet<DenseStorage> {
-        &self.sparse
-    }
-
-    #[inline]
-    pub fn sparse_mut(&mut self) -> &mut StorageSet<DenseStorage> {
-        &mut self.sparse
-    }
-
-    #[inline]
     pub fn remove(&mut self, entity: Entity) {
-        self.sparse.remove(entity);
+        self.dense.remove(entity);
     }
 
     #[inline]
     pub fn contains(&self, id: ComponentId, entity: Entity) -> bool {
-        if let Some(storage) = self.sparse.get(id) {
+        if let Some(storage) = self.dense.get(id) {
             return storage.contains(entity);
         }
 
@@ -100,7 +103,7 @@ impl Storages {
 
     #[inline]
     pub fn entity_ids(&self, id: ComponentId) -> EntityIdSet {
-        if let Some(sparse) = self.sparse.get(id) {
+        if let Some(sparse) = self.dense.get(id) {
             return sparse.entity_ids();
         }
 
@@ -109,7 +112,7 @@ impl Storages {
 
     #[inline]
     pub fn check_change_ticks(&mut self, tick: u32) {
-        for (_, storage) in self.sparse.storage_sets.iter_mut() {
+        for (_, storage) in self.dense.storage_sets.iter_mut() {
             storage.check_change_ticks(tick);
         }
     }

@@ -258,6 +258,7 @@ impl<'w, 's, T: Resource> SystemParamFetch<'w, 's> for ResState<T> {
         change_tick: u32,
     ) -> Self::Item {
         let (ptr, ticks) = world
+            .storage
             .resources
             .get_with_ticks(self.component_id)
             .unwrap_or_else(|| {
@@ -363,6 +364,7 @@ impl<'w, 's, T: Resource> SystemParamFetch<'w, 's> for ResMutState<T> {
         change_tick: u32,
     ) -> Self::Item {
         let (ptr, ticks) = world
+            .storage
             .resources
             .get_with_ticks(self.component_id)
             .unwrap_or_else(|| {
@@ -467,6 +469,7 @@ impl<'w, 's, T: Resource + FromWorld> SystemParamFetch<'w, 's> for ResInitState<
         change_tick: u32,
     ) -> Self::Item {
         let (ptr, ticks) = world
+            .storage
             .resources
             .get_with_ticks(self.component_id)
             .unwrap_or_else(|| {
@@ -574,6 +577,7 @@ impl<'w, 's, T: Resource + FromWorld> SystemParamFetch<'w, 's> for ResMutInitSta
         change_tick: u32,
     ) -> Self::Item {
         let (ptr, ticks) = world
+            .storage
             .resources
             .get_with_ticks(self.component_id)
             .unwrap_or_else(|| {
@@ -620,7 +624,7 @@ impl<'w, 's, T: Resource> SystemParamFetch<'w, 's> for OptionResState<T> {
         world: &'w World,
         change_tick: u32,
     ) -> Self::Item {
-        if world.resources.contains(self.0.component_id) {
+        if world.storage.resources.contains(self.0.component_id) {
             Some(unsafe { ResState::get_param(&mut self.0, meta, world, change_tick) })
         } else {
             None
@@ -653,7 +657,7 @@ impl<'w, 's, T: Resource> SystemParamFetch<'w, 's> for OptionResMutState<T> {
         world: &'w World,
         change_tick: u32,
     ) -> Self::Item {
-        if world.resources.contains(self.0.component_id) {
+        if world.storage.resources.contains(self.0.component_id) {
             Some(unsafe { ResMutState::get_param(&mut self.0, meta, world, change_tick) })
         } else {
             None
