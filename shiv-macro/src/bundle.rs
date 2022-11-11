@@ -17,6 +17,7 @@ pub fn derive_bundle(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
     let expanded = quote! {
+        #[automatically_derived]
         unsafe impl #impl_generics shiv::bundle::Bundle for #name #ty_generics #where_clause {
             type Iter = std::array::IntoIter<*mut ::std::primitive::u8, #count>;
 
@@ -26,7 +27,7 @@ pub fn derive_bundle(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
             }
 
             #[inline]
-            fn get_components(bundle: *mut Self) -> Self::Iter {
+            unsafe fn get_components(bundle: *mut Self) -> Self::Iter {
                 std::array::IntoIter::new([#(unsafe { &mut (*bundle).#members as *mut _ as *mut ::std::primitive::u8 }),*])
             }
         }

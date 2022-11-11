@@ -16,7 +16,7 @@ pub unsafe trait Bundle: Send + Sync + 'static {
 
     fn components(components: &mut Components) -> Vec<ComponentId>;
 
-    fn get_components(bundle: *mut Self) -> Self::Iter;
+    unsafe fn get_components(bundle: *mut Self) -> Self::Iter;
 }
 
 unsafe impl<T: Component> Bundle for T {
@@ -28,7 +28,7 @@ unsafe impl<T: Component> Bundle for T {
     }
 
     #[inline]
-    fn get_components(bundle: *mut Self) -> Self::Iter {
+    unsafe fn get_components(bundle: *mut Self) -> Self::Iter {
         std::iter::once(bundle as *mut u8)
     }
 }
@@ -51,7 +51,7 @@ impl BundleInfo {
         storages: &mut Storages,
         change_tick: u32,
     ) {
-        for (i, data) in T::get_components(&mut bundle).enumerate() {
+        for (i, data) in unsafe { T::get_components(&mut bundle).enumerate() } {
             let component_id = unsafe { self.component_ids.get_unchecked(i) };
             let info = unsafe { components.get_unchecked(*component_id) };
 
@@ -84,7 +84,7 @@ impl BundleInfo {
 
         let mut bundle = MaybeUninit::<T>::uninit();
 
-        for (i, data) in T::get_components(bundle.as_mut_ptr()).enumerate() {
+        for (i, data) in unsafe { T::get_components(bundle.as_mut_ptr()).enumerate() } {
             let component_id = unsafe { *self.component_ids.get_unchecked(i) };
             let info = unsafe { components.get_unchecked(component_id) };
 
@@ -115,8 +115,10 @@ impl Bundles {
     #[inline]
     pub fn init_bundle<T: Bundle>(&mut self, components: &mut Components) -> &BundleInfo {
         let id = TypeId::of::<T>();
-        let component_ids = T::components(components);
-        self.bundles.insert(id, BundleInfo { component_ids });
-        self.bundles.get(&id).unwrap()
+
+        self.bundles.entry(id).or_insert_with(|| {
+            let component_ids = T::components(components);
+            BundleInfo { component_ids }
+        })
     }
 }
