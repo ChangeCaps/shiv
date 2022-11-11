@@ -1,7 +1,10 @@
 use std::ops::{Deref, DerefMut, Mul, MulAssign};
 
 use glam::{Mat3, Mat4, Quat, Vec3};
-use shiv::world::{Component, Entity};
+use shiv::{
+    bundle::Bundle,
+    world::{Component, Entity},
+};
 
 /// The parent of an entity.
 #[repr(transparent)]
@@ -36,6 +39,12 @@ impl DerefMut for Children {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.children
     }
+}
+
+#[derive(Clone, Copy, Debug, Default, Bundle)]
+pub struct TransformBundle {
+    pub transform: Transform,
+    pub global_transform: GlobalTransform,
 }
 
 /// The local transform of an entity.
