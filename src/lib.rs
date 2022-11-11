@@ -21,6 +21,7 @@ pub mod tasks {
 pub mod prelude {
     //! `use shiv::prelude::*;` imports the most commonly used types and traits.
 
+    pub use crate::bundle::Bundle;
     pub use crate::change_detection::Mut;
     pub use crate::event::{Event, EventId, EventReader, EventWriter, Events};
     pub use crate::query::{Added, Changed, Query, QueryIter, QueryState, With, Without};
