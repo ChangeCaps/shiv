@@ -1,8 +1,9 @@
 use std::marker::PhantomData;
 
 use crate::{
+    bundle::Bundle,
     storage::Resource,
-    world::{Component, Entity, FromWorld, World},
+    world::{Entity, FromWorld, World},
 };
 
 #[derive(Debug, Default)]
@@ -128,17 +129,17 @@ impl<'w, 's, 'a> EntityCommands<'w, 's, 'a> {
     }
 
     #[inline]
-    pub fn insert<T: Component>(&mut self, component: T) -> &mut Self {
+    pub fn insert<T: Bundle>(&mut self, bundle: T) -> &mut Self {
         self.commands.add(Insert {
             entity: self.entity,
-            component,
+            bundle,
         });
 
         self
     }
 
     #[inline]
-    pub fn remove<T: Component>(&mut self) -> &mut Self {
+    pub fn remove<T: Bundle>(&mut self) -> &mut Self {
         self.commands.add(Remove {
             entity: self.entity,
             marker: PhantomData::<T>,
@@ -158,12 +159,12 @@ impl<'w, 's, 'a> EntityCommands<'w, 's, 'a> {
 #[derive(Debug)]
 pub struct Insert<T> {
     pub entity: Entity,
-    pub component: T,
+    pub bundle: T,
 }
 
-impl<T: Component> Command for Insert<T> {
+impl<T: Bundle> Command for Insert<T> {
     fn apply(self: Box<Self>, world: &mut World) {
-        world.entity_mut(self.entity).insert(self.component);
+        world.entity_mut(self.entity).insert(self.bundle);
     }
 }
 
@@ -173,7 +174,7 @@ pub struct Remove<T> {
     pub marker: PhantomData<T>,
 }
 
-impl<T: Component> Command for Remove<T> {
+impl<T: Bundle> Command for Remove<T> {
     fn apply(self: Box<Self>, world: &mut World) {
         world.entity_mut(self.entity).remove::<T>();
     }
