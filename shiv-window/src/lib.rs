@@ -1,11 +1,9 @@
 mod event;
-mod key;
 mod window;
 #[cfg(feature = "winit")]
 pub mod winit;
 
 pub use event::*;
-pub use key::*;
 pub use window::*;
 
 use shiv_app::{App, Plugin, Plugins};
@@ -20,9 +18,6 @@ impl Plugin for WindowPlugin {
         app.add_event::<WindowCreated>();
         app.add_event::<WindowClosed>();
         app.add_event::<WindowResized>();
-        app.add_event::<MouseMotion>();
-        app.add_event::<KeyInput>();
-        app.add_event::<MouseInput>();
         app.add_event::<TextInput>();
     }
 

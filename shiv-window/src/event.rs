@@ -1,4 +1,4 @@
-use crate::{InputState, Key, Mouse, WindowId};
+use crate::WindowId;
 
 #[derive(Clone, Copy, Debug)]
 pub struct CloseRequested {
@@ -25,24 +25,6 @@ pub struct WindowResized {
     pub window_id: WindowId,
     pub width: u32,
     pub height: u32,
-}
-
-#[derive(Clone, Copy, Debug)]
-pub struct MouseMotion {
-    pub x: f32,
-    pub y: f32,
-}
-
-#[derive(Clone, Copy, Debug)]
-pub struct KeyInput {
-    pub key: Key,
-    pub state: InputState,
-}
-
-#[derive(Clone, Copy, Debug)]
-pub struct MouseInput {
-    pub button: Mouse,
-    pub state: InputState,
 }
 
 #[derive(Clone, Copy, Debug)]

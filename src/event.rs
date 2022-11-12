@@ -144,6 +144,16 @@ impl<T: Event> SystemLabel for UpdateEventsSystem<T> {
     }
 }
 
+#[derive(Clone, Copy, Debug, Default)]
+pub struct EventSystem;
+
+impl SystemLabel for EventSystem {
+    #[inline]
+    fn label(self) -> SystemLabelId {
+        SystemLabelId::from_raw_parts::<Self>(std::any::type_name::<Self>(), 0)
+    }
+}
+
 /// Storage [`Resource`] for [`Event`]s.
 ///
 /// This should usually not be used manually see, [`EventReader`] and [`EventWriter`].

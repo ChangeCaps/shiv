@@ -1,28 +1,4 @@
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum InputState {
-    Pressed,
-    Released,
-}
-
-impl InputState {
-    pub fn is_pressed(self) -> bool {
-        self == Self::Pressed
-    }
-
-    pub fn is_released(self) -> bool {
-        self == Self::Released
-    }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum Mouse {
-    Left,
-    Right,
-    Middle,
-    Other(u16),
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Key {
     A,
     B,

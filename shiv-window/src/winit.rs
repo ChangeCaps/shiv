@@ -4,17 +4,21 @@ use std::sync::{
 };
 
 use deref_derive::Deref;
+use glam::Vec2;
 use shiv::hash_map::HashMap;
 use shiv_app::{App, AppRunner, Plugin};
+use shiv_input::{
+    InputEvent, InputState, Key, MouseButton, MouseMotion, MousePosition, MouseScroll,
+};
 use winit::{
-    event::{DeviceEvent, Event, WindowEvent},
+    event::{DeviceEvent, Event, MouseScrollDelta, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     window::CursorGrabMode,
 };
 
 use crate::{
-    CloseRequested, InputState, Key, KeyInput, Mouse, MouseInput, MouseMotion, RawWindowHandle,
-    RedrawRequested, TextInput, Window, WindowCreated, WindowId, WindowResized, Windows,
+    CloseRequested, RawWindowHandle, RedrawRequested, TextInput, Window, WindowCreated, WindowId,
+    WindowResized, Windows,
 };
 
 #[inline]
@@ -26,12 +30,12 @@ fn convert_element_state(state: winit::event::ElementState) -> InputState {
 }
 
 #[inline]
-fn convert_mouse_button(button: winit::event::MouseButton) -> Mouse {
+fn convert_mouse_button(button: winit::event::MouseButton) -> MouseButton {
     match button {
-        winit::event::MouseButton::Left => Mouse::Left,
-        winit::event::MouseButton::Right => Mouse::Right,
-        winit::event::MouseButton::Middle => Mouse::Middle,
-        winit::event::MouseButton::Other(other) => Mouse::Other(other),
+        winit::event::MouseButton::Left => MouseButton::Left,
+        winit::event::MouseButton::Right => MouseButton::Right,
+        winit::event::MouseButton::Middle => MouseButton::Middle,
+        winit::event::MouseButton::Other(other) => MouseButton::Other(other),
     }
 }
 
@@ -325,10 +329,21 @@ impl AppRunner for WinitRunner {
             Event::DeviceEvent { event, .. } => match event {
                 DeviceEvent::MouseMotion { delta } => {
                     app.send_event(MouseMotion {
-                        x: delta.0 as f32,
-                        y: delta.1 as f32,
+                        delta: Vec2::new(delta.0 as f32, delta.1 as f32),
                     });
                 }
+                DeviceEvent::MouseWheel { delta } => match delta {
+                    MouseScrollDelta::LineDelta(x, y) => {
+                        app.send_event(MouseScroll {
+                            delta: Vec2::new(x as f32, y as f32),
+                        });
+                    }
+                    MouseScrollDelta::PixelDelta(pos) => {
+                        app.send_event(MouseScroll {
+                            delta: Vec2::new(pos.x as f32, pos.y as f32),
+                        });
+                    }
+                },
                 DeviceEvent::Key(input) => {
                     let key = match input.virtual_keycode {
                         Some(key) => match convert_key_code(key) {
@@ -340,7 +355,7 @@ impl AppRunner for WinitRunner {
 
                     let state = convert_element_state(input.state);
 
-                    app.send_event(KeyInput { key, state });
+                    app.send_event(InputEvent::new(key, state));
                 }
                 DeviceEvent::Text { codepoint } => {
                     app.send_event(TextInput { codepoint });
@@ -372,7 +387,12 @@ impl AppRunner for WinitRunner {
                     let button = convert_mouse_button(button);
                     let state = convert_element_state(state);
 
-                    app.send_event(MouseInput { button, state });
+                    app.send_event(InputEvent::new(button, state));
+                }
+                WindowEvent::CursorMoved { position, .. } => {
+                    app.send_event(MousePosition {
+                        position: Vec2::new(position.x as f32, position.y as f32),
+                    });
                 }
                 _ => {}
             },

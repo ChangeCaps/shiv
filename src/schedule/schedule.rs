@@ -1,7 +1,7 @@
 use hyena::TaskPool;
 
 use crate as shiv;
-use crate::event::UpdateEventsSystem;
+use crate::event::{EventSystem, UpdateEventsSystem};
 use crate::{
     event::{Event, Events},
     hash_map::HashMap,
@@ -394,7 +394,11 @@ impl Schedule {
     pub fn add_event<E: Event>(&mut self) {
         if let Some(stage) = self.get_stage_mut::<SystemStage>(DefaultStage::First) {
             if !stage.has_system(UpdateEventsSystem::<E>::new()) {
-                stage.add_system(Events::<E>::update_system);
+                stage.add_system(
+                    Events::<E>::update_system
+                        .label(EventSystem)
+                        .label(UpdateEventsSystem::<E>::new()),
+                );
             }
         }
     }
