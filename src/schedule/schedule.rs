@@ -1,16 +1,17 @@
-use hyena::TaskPool;
-
 use crate::event::{EventSystem, UpdateEventsSystem};
 use crate::{
     event::{Event, Events},
     hash_map::HashMap,
     world::World,
 };
+use hyena::TaskPool;
 
 use super::{
     IntoRunCriteria, IntoSystemDescriptor, RunCriteria, ShouldRun, Stage, StageLabel, StageLabelId,
     SystemStage,
 };
+
+use crate as shiv;
 
 /// [`Stage`]s that are automatically added by [`Schedule::new`].
 ///
@@ -430,6 +431,7 @@ impl Stage for Schedule {
 
 #[cfg(test)]
 mod tests {
+    use crate as shiv;
     use crate::schedule::{DefaultStage, Schedule, StageLabel, SystemStage};
 
     #[derive(StageLabel)]

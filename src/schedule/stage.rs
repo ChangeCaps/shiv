@@ -9,8 +9,8 @@ use crate::{
 };
 
 use super::{
-    IntoRunCriteria, IntoSystemDescriptor, ParallelExecutor, RunCriteria, SequentialExecutor,
-    ShouldRun, SystemContainer, SystemExecutor, SystemLabel,
+    IntoRunCriteria, IntoSystemDescriptor, ParallelExecutor, RunCriteria, Schedule,
+    SequentialExecutor, ShouldRun, SystemContainer, SystemExecutor, SystemLabel,
 };
 
 pub trait Stage: Downcast + Send + Sync {
@@ -21,6 +21,8 @@ impl std::fmt::Debug for dyn Stage {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if let Some(system_stage) = self.downcast_ref::<SystemStage>() {
             write!(f, "{system_stage:?}")
+        } else if let Some(schedule) = self.downcast_ref::<Schedule>() {
+            write!(f, "{schedule:?}")
         } else {
             write!(f, "{{Custom Stage}}")
         }
@@ -336,10 +338,13 @@ impl Stage for SystemStage {
 mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
-    use crate::query::Query;
-    use crate::schedule::{IntoSystemDescriptor, SystemLabel};
-    use crate::system::ResMut;
-    use crate::world::World;
+    use crate as shiv;
+    use crate::{
+        query::Query,
+        schedule::{IntoSystemDescriptor, SystemLabel},
+        system::ResMut,
+        world::World,
+    };
 
     use super::{Stage, SystemStage};
 

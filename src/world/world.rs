@@ -326,6 +326,7 @@ impl std::fmt::Debug for World {
 mod tests {
     use shiv_macro::Bundle;
 
+    use crate as shiv;
     use crate::{
         query::{With, Without},
         storage::DenseStorage,

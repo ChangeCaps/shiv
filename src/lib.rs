@@ -40,10 +40,13 @@ pub mod prelude {
 mod tests {
     use std::collections::HashMap;
 
-    use crate::query::{Added, Changed, Query, With};
-    use crate::schedule::{IntoSystemDescriptor, Schedule, ShouldRun, StageLabel, SystemStage};
-    use crate::system::{Commands, Local, ResMut};
-    use crate::world::{Entity, World};
+    use crate as shiv;
+    use crate::{
+        query::{Added, Changed, Query, With},
+        schedule::{IntoSystemDescriptor, Schedule, ShouldRun, StageLabel, SystemStage},
+        system::{Commands, Local, ResMut},
+        world::{Entity, World},
+    };
 
     #[derive(StageLabel)]
     enum TestStage {
