@@ -7,6 +7,7 @@ pub use event::*;
 pub use window::*;
 
 use shiv_app::{App, Plugin, Plugins};
+use shiv_input::InputPlugin;
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct WindowPlugin;
@@ -24,5 +25,7 @@ impl Plugin for WindowPlugin {
     fn dependencies(&self, plugins: &mut Plugins) {
         #[cfg(feature = "winit")]
         plugins.add(winit::WinitPlugin);
+
+        plugins.add(InputPlugin);
     }
 }
