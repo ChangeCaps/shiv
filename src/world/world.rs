@@ -31,6 +31,7 @@ pub trait FromWorld: Sized {
 }
 
 impl<T: Default> FromWorld for T {
+    #[inline]
     fn from_world(_: &mut World) -> Self {
         Self::default()
     }
