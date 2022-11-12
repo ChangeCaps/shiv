@@ -1,6 +1,5 @@
 use hyena::TaskPool;
 
-use crate as shiv;
 use crate::event::{EventSystem, UpdateEventsSystem};
 use crate::{
     event::{Event, Events},
@@ -431,7 +430,6 @@ impl Stage for Schedule {
 
 #[cfg(test)]
 mod tests {
-    use crate as shiv;
     use crate::schedule::{DefaultStage, Schedule, StageLabel, SystemStage};
 
     #[derive(StageLabel)]

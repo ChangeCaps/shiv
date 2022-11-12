@@ -40,7 +40,6 @@ pub mod prelude {
 mod tests {
     use std::collections::HashMap;
 
-    use crate as shiv;
     use crate::query::{Added, Changed, Query, With};
     use crate::schedule::{IntoSystemDescriptor, Schedule, ShouldRun, StageLabel, SystemStage};
     use crate::system::{Commands, Local, ResMut};

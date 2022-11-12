@@ -336,7 +336,6 @@ impl Stage for SystemStage {
 mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
-    use crate as shiv;
     use crate::query::Query;
     use crate::schedule::{IntoSystemDescriptor, SystemLabel};
     use crate::system::ResMut;

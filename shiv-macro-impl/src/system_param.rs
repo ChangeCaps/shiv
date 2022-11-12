@@ -1,21 +1,19 @@
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{
-    parse_macro_input, parse_quote, punctuated::Punctuated, token::Comma, Data, DeriveInput,
-    GenericParam, Generics, Ident, Index, Type,
+    parse_quote, punctuated::Punctuated, token::Comma, Data, DeriveInput, GenericParam, Generics,
+    Ident, Index, Path, Type,
 };
 
-pub fn derive_system_param(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let input = parse_macro_input!(input as DeriveInput);
-
+pub fn derive_system_param(input: DeriveInput, shiv: Path) -> proc_macro2::TokenStream {
     validate_lifetimes(&input.generics);
 
     let fields = fields(&input.data);
     let field_idents = field_idents(&input.data);
 
-    let state_generics = state_generics(&input.generics);
+    let state_generics = state_generics(&input.generics, &shiv);
     let fetch_generics = fetch_generics(&input.generics);
-    let read_only_generics = read_only_generics(&input.generics);
+    let read_only_generics = read_only_generics(&input.generics, &shiv);
 
     let (state_impl_generics, state_ty_generics, state_where_clause) =
         state_generics.split_for_impl();
@@ -23,7 +21,7 @@ pub fn derive_system_param(input: proc_macro::TokenStream) -> proc_macro::TokenS
     let (_, _, read_only_where_clause) = read_only_generics.split_for_impl();
 
     let marker_generics = marker_generics(&input.generics);
-    let fetch_ty_generics = fetch_ty_generics(&input.generics, &fields);
+    let fetch_ty_generics = fetch_ty_generics(&input.generics, &fields, &shiv);
 
     let indices = (0..fields.len()).map(|i| Index::from(i));
 
@@ -32,10 +30,10 @@ pub fn derive_system_param(input: proc_macro::TokenStream) -> proc_macro::TokenS
     let vis = input.vis;
     let name = input.ident;
 
-    let expanded = quote! {
+    quote! {
         const _: () = {
             #[automatically_derived]
-            impl #impl_generics shiv::system::SystemParam for #name #ty_generics #where_clause {
+            impl #impl_generics #shiv::system::SystemParam for #name #ty_generics #where_clause {
                 type Fetch = FetchState<#fetch_ty_generics>;
             }
 
@@ -45,19 +43,19 @@ pub fn derive_system_param(input: proc_macro::TokenStream) -> proc_macro::TokenS
             }
 
             #[automatically_derived]
-            unsafe impl #state_impl_generics shiv::system::ReadOnlySystemParamFetch for
+            unsafe impl #state_impl_generics #shiv::system::ReadOnlySystemParamFetch for
                 FetchState #state_ty_generics #read_only_where_clause
             {
             }
 
             #[automatically_derived]
-            unsafe impl #state_impl_generics shiv::system::SystemParamState for FetchState
+            unsafe impl #state_impl_generics #shiv::system::SystemParamState for FetchState
                 #state_ty_generics #state_where_clause
             {
                 #[inline]
                 fn init(
-                    world: &mut shiv::world::World,
-                    meta: &mut shiv::system::SystemMeta,
+                    world: &mut #shiv::world::World,
+                    meta: &mut #shiv::system::SystemMeta,
                 ) -> Self {
                     Self {
                         state: __TSystemParamState::init(world, meta),
@@ -66,13 +64,13 @@ pub fn derive_system_param(input: proc_macro::TokenStream) -> proc_macro::TokenS
                 }
 
                 #[inline]
-                fn apply(&mut self, world: &mut shiv::world::World) {
+                fn apply(&mut self, world: &mut #shiv::world::World) {
                     self.state.apply(world);
                 }
             }
 
             #[automatically_derived]
-            impl #fetch_impl_generics shiv::system::SystemParamFetch<'w, 's> for
+            impl #fetch_impl_generics #shiv::system::SystemParamFetch<'w, 's> for
                 FetchState<#fetch_ty_generics> #state_where_clause
             {
                 type Item = #name #ty_generics;
@@ -81,11 +79,11 @@ pub fn derive_system_param(input: proc_macro::TokenStream) -> proc_macro::TokenS
                 #[allow(dead_code)]
                 unsafe fn get_param(
                     &'s mut self,
-                    meta: &shiv::system::SystemMeta,
-                    world: &'w shiv::world::World,
+                    meta: &#shiv::system::SystemMeta,
+                    world: &'w #shiv::world::World,
                     change_ticks: ::std::primitive::u32,
                 ) -> Self::Item {
-                    let param = shiv::system::SystemParamFetch::get_param(
+                    let param = #shiv::system::SystemParamFetch::get_param(
                         &mut self.state,
                         meta,
                         world,
@@ -96,9 +94,7 @@ pub fn derive_system_param(input: proc_macro::TokenStream) -> proc_macro::TokenS
                 }
             }
         };
-    };
-
-    proc_macro::TokenStream::from(expanded)
+    }
 }
 
 fn validate_lifetimes(generics: &Generics) {
@@ -138,7 +134,7 @@ fn fetch_generics(generics: &Generics) -> Generics {
     generics
 }
 
-fn state_generics(generics: &Generics) -> Generics {
+fn state_generics(generics: &Generics, shiv: &Path) -> Generics {
     let mut generics = generics.clone();
 
     generics.params = generics
@@ -152,7 +148,7 @@ fn state_generics(generics: &Generics) -> Generics {
         .collect();
 
     generics.params.push(parse_quote!(
-        __TSystemParamState: shiv::system::SystemParamState
+        __TSystemParamState: #shiv::system::SystemParamState
     ));
 
     generics.make_where_clause().predicates.push(parse_quote!(
@@ -162,15 +158,15 @@ fn state_generics(generics: &Generics) -> Generics {
     generics
 }
 
-fn read_only_generics(generics: &Generics) -> Generics {
+fn read_only_generics(generics: &Generics, shiv: &Path) -> Generics {
     let mut generics = generics.clone();
 
     let where_clause = generics.make_where_clause();
     where_clause.predicates.push(parse_quote!(
-        __TSystemParamState: shiv::system::ReadOnlySystemParamFetch
+        __TSystemParamState: #shiv::system::ReadOnlySystemParamFetch
     ));
     where_clause.predicates.push(parse_quote!(
-        Self: for<'w, 's> shiv::system::SystemParamFetch<'w, 's>
+        Self: for<'w, 's> #shiv::system::SystemParamFetch<'w, 's>
     ));
 
     generics
@@ -188,7 +184,11 @@ fn marker_generics(generics: &Generics) -> Punctuated<TokenStream, Comma> {
     marker_generics
 }
 
-fn fetch_ty_generics(generics: &Generics, fields: &[Type]) -> Punctuated<TokenStream, Comma> {
+fn fetch_ty_generics(
+    generics: &Generics,
+    fields: &[Type],
+    shiv: &Path,
+) -> Punctuated<TokenStream, Comma> {
     let mut fetch_ty_generics = Punctuated::<TokenStream, Comma>::new();
     for generic in generics.params.iter() {
         if let GenericParam::Type(ty) = generic {
@@ -197,7 +197,7 @@ fn fetch_ty_generics(generics: &Generics, fields: &[Type]) -> Punctuated<TokenSt
         }
     }
 
-    fetch_ty_generics.push(quote!((#(<#fields as shiv::system::SystemParam>::Fetch,)*)));
+    fetch_ty_generics.push(quote!((#(<#fields as #shiv::system::SystemParam>::Fetch,)*)));
 
     fetch_ty_generics
 }

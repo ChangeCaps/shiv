@@ -384,8 +384,6 @@ mod tests {
 
     #[test]
     fn zst() {
-        use crate as shiv;
-
         #[derive(Component, Debug, PartialEq)]
         struct Zst;
 
@@ -522,8 +520,6 @@ mod tests {
 
     #[test]
     fn bundle() {
-        use crate as shiv;
-
         #[derive(Bundle)]
         struct TestBundle {
             a: i32,

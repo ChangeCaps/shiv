@@ -1,18 +1,14 @@
 [package]
-name = "shiv-macro"
+name = "shiv-macro-impl"
 version = "0.1.0-alpha3"
 edition = "2021"
-description = "Macros for shiv"
+description = "Macro impl for shiv"
 repository = "https://github.com/ChangeCaps/shiv"
 license = "MIT OR Apache-2.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[lib]
-proc-macro = true
-
 [dependencies]
-shiv-macro-impl = { path = "../shiv-macro-impl", version = "0.1.0-alpha3" }
-
-proc-macro-crate = "1.2"
+proc-macro2 = "1.0"
+quote = "1.0"
 syn = "1.0"
