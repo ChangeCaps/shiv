@@ -56,8 +56,9 @@ impl<'w, 's> Commands<'w, 's> {
     }
 
     #[inline]
-    pub fn add(&mut self, command: impl Command) {
+    pub fn add_command(&mut self, command: impl Command) -> &mut Self {
         self.queue.queue.push(Box::new(command));
+        self
     }
 
     #[inline]
@@ -68,7 +69,7 @@ impl<'w, 's> Commands<'w, 's> {
 
     #[inline]
     pub fn get_or_spawn<'a>(&'a mut self, entity: Entity) -> EntityCommands<'w, 's, 'a> {
-        self.add(GetOrSpawn { entity });
+        self.add_command(GetOrSpawn { entity });
         EntityCommands::new(self, entity)
     }
 
@@ -94,18 +95,18 @@ impl<'w, 's> Commands<'w, 's> {
 
     #[inline]
     pub fn insert_resource<T: Resource>(&mut self, resource: T) {
-        self.add(InsertResource { resource });
+        self.add_command(InsertResource { resource });
     }
 
     pub fn init_resource<T: Resource + FromWorld>(&mut self) {
-        self.add(InitResource {
+        self.add_command(InitResource {
             marker: PhantomData::<T>,
         });
     }
 
     #[inline]
     pub fn remove_resource<T: Resource>(&mut self) {
-        self.add(RemoveResource {
+        self.add_command(RemoveResource {
             marker: PhantomData::<T>,
         });
     }
@@ -113,8 +114,8 @@ impl<'w, 's> Commands<'w, 's> {
 
 #[derive(Debug)]
 pub struct EntityCommands<'w, 's, 'a> {
-    commands: &'a mut Commands<'w, 's>,
-    entity: Entity,
+    pub(crate) commands: &'a mut Commands<'w, 's>,
+    pub(crate) entity: Entity,
 }
 
 impl<'w, 's, 'a> EntityCommands<'w, 's, 'a> {
@@ -124,13 +125,24 @@ impl<'w, 's, 'a> EntityCommands<'w, 's, 'a> {
     }
 
     #[inline]
+    pub fn commands(&mut self) -> &mut Commands<'w, 's> {
+        self.commands
+    }
+
+    #[inline]
     pub fn entity(&self) -> Entity {
         self.entity
     }
 
     #[inline]
+    pub fn add_command(&mut self, command: impl Command) -> &mut Self {
+        self.commands.add_command(command);
+        self
+    }
+
+    #[inline]
     pub fn insert<T: Bundle>(&mut self, bundle: T) -> &mut Self {
-        self.commands.add(Insert {
+        self.commands.add_command(Insert {
             entity: self.entity,
             bundle,
         });
@@ -140,7 +152,7 @@ impl<'w, 's, 'a> EntityCommands<'w, 's, 'a> {
 
     #[inline]
     pub fn remove<T: Bundle>(&mut self) -> &mut Self {
-        self.commands.add(Remove {
+        self.commands.add_command(Remove {
             entity: self.entity,
             marker: PhantomData::<T>,
         });
@@ -150,7 +162,7 @@ impl<'w, 's, 'a> EntityCommands<'w, 's, 'a> {
 
     #[inline]
     pub fn despawn(&mut self) {
-        self.commands.add(Despawn {
+        self.commands.add_command(Despawn {
             entity: self.entity,
         });
     }

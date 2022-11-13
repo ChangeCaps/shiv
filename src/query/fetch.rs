@@ -134,11 +134,6 @@ unsafe impl<T: Component> WorldQuery for &T {
     }
 
     #[inline]
-    unsafe fn filter_fetch<'w>(fetch: &mut Self::Fetch<'w>, entity: Entity) -> bool {
-        fetch.storage.contains(entity)
-    }
-
-    #[inline]
     fn init_state(world: &mut World) -> Self::State {
         world.init_component::<T>()
     }

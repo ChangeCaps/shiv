@@ -6,6 +6,8 @@ pub mod bundle;
 pub mod change_detection;
 pub mod event;
 pub mod hash_map;
+#[cfg(feature = "hierarchy")]
+pub mod hierarchy;
 pub mod query;
 pub mod schedule;
 pub mod storage;

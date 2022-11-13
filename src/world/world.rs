@@ -1,10 +1,10 @@
 use std::sync::atomic::{AtomicU32, Ordering};
 
 use crate::{
-    bundle::Bundles,
+    bundle::{Bundle, Bundles},
     change_detection::{Mut, Ticks},
     query::{QueryState, ReadOnlyWorldQuery, WorldQuery},
-    storage::{Resource, Storages},
+    storage::{ComponentStorage, Resource, Storages},
     world::Entities,
 };
 
@@ -105,12 +105,6 @@ impl World {
         storage_sets.initialize(info);
 
         id
-    }
-
-    #[inline]
-    pub fn despawn(&mut self, entity: Entity) -> bool {
-        self.storage.remove(entity);
-        self.entities.free(entity)
     }
 }
 
@@ -234,6 +228,12 @@ impl World {
     }
 
     #[inline]
+    pub fn remove<T: Bundle>(&mut self, entity: Entity) -> Option<T> {
+        let bundle_info = self.bundles.init_bundle::<T>(&mut self.components);
+        unsafe { bundle_info.remove::<T>(entity, &mut self.components, &mut self.storage) }
+    }
+
+    #[inline]
     pub fn get_entity(&self, entity: Entity) -> Option<EntityRef<'_>> {
         if self.entities.contains(entity) {
             Some(EntityRef::new(self, entity))
@@ -275,6 +275,57 @@ impl World {
                 entity,
             )
         }
+    }
+
+    #[inline]
+    pub fn contains<T: Component>(&self, entity: Entity) -> bool {
+        let id = if let Some(id) = self.components.get_component::<T>() {
+            id
+        } else {
+            return false;
+        };
+
+        let storage_sets = <T::Storage as Storage>::get(&self.storage);
+        let storage = unsafe { storage_sets.get_unchecked(id) };
+
+        storage.contains(entity)
+    }
+
+    #[inline]
+    pub fn get<T: Component>(&self, entity: Entity) -> Option<&T> {
+        let id = self.components.get_component::<T>()?;
+
+        let storage_sets = <T::Storage as Storage>::get(&self.storage);
+        let storage = unsafe { storage_sets.get_unchecked(id) };
+
+        let ptr = storage.get(entity)?;
+        Some(unsafe { &*(ptr as *const T) })
+    }
+
+    #[inline]
+    pub fn get_mut<T: Component>(&mut self, entity: Entity) -> Option<Mut<'_, T>> {
+        let id = self.components.get_component::<T>()?;
+
+        let storage_sets = <T::Storage as Storage>::get_mut(&mut self.storage);
+        let storage = unsafe { storage_sets.get_unchecked_mut(id) };
+
+        let ptr = storage.get(entity)?;
+        let ticks = unsafe { storage.get_ticks_unchecked(entity) };
+
+        Some(Mut {
+            value: unsafe { &mut *(ptr as *mut T) },
+            ticks: Ticks {
+                ticks: unsafe { &mut *ticks.get() },
+                last_change_tick: self.last_change_tick(),
+                change_tick: self.change_tick(),
+            },
+        })
+    }
+
+    #[inline]
+    pub fn despawn(&mut self, entity: Entity) -> bool {
+        self.storage.remove(entity);
+        self.entities.free(entity)
     }
 }
 

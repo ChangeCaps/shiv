@@ -1,15 +1,11 @@
-use crate::{
-    bundle::Bundle,
-    change_detection::{Mut, Ticks},
-    storage::ComponentStorage,
-};
+use crate::{bundle::Bundle, change_detection::Mut};
 
-use super::{Component, Entity, Storage, World};
+use super::{Component, Entity, World};
 
 #[derive(Clone, Copy, Debug)]
 pub struct EntityRef<'w> {
-    world: &'w World,
-    entity: Entity,
+    pub(crate) world: &'w World,
+    pub(crate) entity: Entity,
 }
 
 impl<'w> EntityRef<'w> {
@@ -30,34 +26,19 @@ impl<'w> EntityRef<'w> {
 
     #[inline]
     pub fn contains<T: Component>(&self) -> bool {
-        let id = if let Some(id) = self.world.components.get_component::<T>() {
-            id
-        } else {
-            return false;
-        };
-
-        let storage_sets = <T::Storage as Storage>::get(&self.world.storage);
-        let storage = unsafe { storage_sets.get_unchecked(id) };
-
-        storage.contains(self.entity)
+        self.world.contains::<T>(self.entity)
     }
 
     #[inline]
-    pub fn get<T: Component>(&self) -> Option<&T> {
-        let id = self.world.components.get_component::<T>()?;
-
-        let storage_sets = <T::Storage as Storage>::get(&self.world.storage);
-        let storage = unsafe { storage_sets.get_unchecked(id) };
-
-        let ptr = storage.get(self.entity)?;
-        Some(unsafe { &*(ptr as *const T) })
+    pub fn get<T: Component>(&self) -> Option<&'w T> {
+        self.world.get(self.entity)
     }
 }
 
 #[derive(Debug)]
 pub struct EntityMut<'w> {
-    world: &'w mut World,
-    entity: Entity,
+    pub(crate) world: &'w mut World,
+    pub(crate) entity: Entity,
 }
 
 impl<'w> EntityMut<'w> {
@@ -77,48 +58,23 @@ impl<'w> EntityMut<'w> {
     }
 
     #[inline]
-    pub fn contains<T: Component>(&self) -> bool {
-        let id = if let Some(id) = self.world.components.get_component::<T>() {
-            id
-        } else {
-            return false;
-        };
-
-        let storage_sets = <T::Storage as Storage>::get(&self.world.storage);
-        let storage = unsafe { storage_sets.get_unchecked(id) };
-
-        storage.contains(self.entity)
+    pub fn world_mut(&mut self) -> &mut World {
+        self.world
     }
 
     #[inline]
-    pub fn get<T: Component>(&self) -> Option<&T> {
-        let id = self.world.components.get_component::<T>()?;
+    pub fn contains<T: Component>(&self) -> bool {
+        self.world.contains::<T>(self.entity)
+    }
 
-        let storage_sets = <T::Storage as Storage>::get(&self.world.storage);
-        let storage = unsafe { storage_sets.get_unchecked(id) };
-
-        let ptr = storage.get(self.entity)?;
-        Some(unsafe { &*(ptr as *const T) })
+    #[inline]
+    pub fn get<T: Component>(&self) -> Option<&'_ T> {
+        self.world.get(self.entity)
     }
 
     #[inline]
     pub fn get_mut<T: Component>(&mut self) -> Option<Mut<'_, T>> {
-        let id = self.world.components.get_component::<T>()?;
-
-        let storage_sets = <T::Storage as Storage>::get_mut(&mut self.world.storage);
-        let storage = unsafe { storage_sets.get_unchecked_mut(id) };
-
-        let ptr = storage.get(self.entity)?;
-        let ticks = unsafe { storage.get_ticks_unchecked(self.entity) };
-
-        Some(Mut {
-            value: unsafe { &mut *(ptr as *mut T) },
-            ticks: Ticks {
-                ticks: unsafe { &mut *ticks.get() },
-                last_change_tick: self.world.last_change_tick(),
-                change_tick: self.world.change_tick(),
-            },
-        })
+        self.world.get_mut(self.entity)
     }
 
     #[inline]
@@ -138,23 +94,16 @@ impl<'w> EntityMut<'w> {
                 change_tick,
             )
         };
-
         self
     }
 
     #[inline]
     pub fn remove<T: Bundle>(&mut self) -> Option<T> {
-        let bundle_info = self
-            .world
-            .bundles
-            .init_bundle::<T>(&mut self.world.components);
+        self.world.remove(self.entity)
+    }
 
-        unsafe {
-            bundle_info.remove::<T>(
-                self.entity,
-                &mut self.world.components,
-                &mut self.world.storage,
-            )
-        }
+    #[inline]
+    pub fn despawn(self) {
+        self.world.despawn(self.entity);
     }
 }

@@ -1,45 +1,7 @@
-use std::ops::{Deref, DerefMut, Mul, MulAssign};
+use std::ops::{Mul, MulAssign};
 
 use glam::{Mat3, Mat4, Quat, Vec3};
-use shiv::{
-    bundle::Bundle,
-    world::{Component, Entity},
-};
-
-/// The parent of an entity.
-#[repr(transparent)]
-#[derive(Component, Debug, Clone, Copy, PartialEq)]
-pub struct Parent(pub Entity);
-
-/// The children of an entity.
-///
-/// This should **almost never** be modified directly.
-/// Instead, use the [`Parent`] component instead.
-#[derive(Component, Debug, Clone, Default, PartialEq)]
-pub struct Children {
-    pub children: Vec<Entity>,
-}
-
-impl Children {
-    #[inline]
-    pub fn remove(&mut self, entity: Entity) {
-        self.retain(|e| *e != entity);
-    }
-}
-
-impl Deref for Children {
-    type Target = Vec<Entity>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.children
-    }
-}
-
-impl DerefMut for Children {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.children
-    }
-}
+use shiv::{bundle::Bundle, world::Component};
 
 #[derive(Clone, Copy, Debug, Default, Bundle)]
 pub struct TransformBundle {

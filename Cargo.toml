@@ -25,5 +25,6 @@ hyena = "0.2"
 tracing = { version = "0.1", default-features = false, optional = true }
 
 [features]
-default = ["tracing"]
+default = ["tracing", "hierarchy"]
 tracing = ["dep:tracing"]
+hierarchy = []
