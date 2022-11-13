@@ -26,6 +26,8 @@ pub mod prelude {
     pub use crate::bundle::Bundle;
     pub use crate::change_detection::Mut;
     pub use crate::event::{Event, EventId, EventReader, EventWriter, Events};
+    #[cfg(feature = "hierarchy")]
+    pub use crate::hierarchy::{Children, Parent};
     pub use crate::query::{Added, Changed, Query, QueryIter, QueryState, With, Without};
     pub use crate::schedule::{
         DefaultStage, IntoSystemDescriptor, Schedule, Stage, StageLabel, SystemLabel, SystemStage,
