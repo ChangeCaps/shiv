@@ -59,6 +59,39 @@ pub trait SystemParamFetch<'w, 's>: SystemParamState {
     ) -> Self::Item;
 }
 
+#[doc(hidden)]
+#[derive(Debug)]
+pub struct WorldFetch;
+
+impl SystemParam for &World {
+    type Fetch = WorldFetch;
+}
+
+unsafe impl SystemParamState for WorldFetch {
+    fn init(_world: &mut World, meta: &mut SystemMeta) -> Self {
+        if meta.access.write_any() {
+            panic!("&World cannot be used as a parameter to a system that writes to any component or resource");
+        }
+
+        meta.access.read_all();
+
+        WorldFetch
+    }
+}
+
+impl<'w, 's> SystemParamFetch<'w, 's> for WorldFetch {
+    type Item = &'w World;
+
+    unsafe fn get_param(
+        &'s mut self,
+        _meta: &SystemMeta,
+        world: &'w World,
+        _change_tick: u32,
+    ) -> Self::Item {
+        world
+    }
+}
+
 unsafe impl SystemParamState for CommandQueue {
     fn init(_world: &mut World, _meta: &mut SystemMeta) -> Self {
         Self::default()

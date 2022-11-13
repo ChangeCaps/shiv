@@ -78,6 +78,11 @@ where
     }
 
     #[inline]
+    pub fn write_any(&self) -> bool {
+        self.write.count_ones(..) != 0
+    }
+
+    #[inline]
     pub fn clear(&mut self) {
         self.read.clear();
         self.write.clear();
@@ -228,6 +233,11 @@ where
     #[inline]
     pub fn has_without(&self, index: T) -> bool {
         self.without.contains(index.into())
+    }
+
+    #[inline]
+    pub fn write_any(&self) -> bool {
+        self.access.write_any()
     }
 
     #[inline]
