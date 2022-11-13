@@ -8,7 +8,7 @@ use shiv_app::{App, CoreStage, Plugin, StartupStage};
 
 use crate::{GlobalTransform, Transform};
 
-pub fn update_transform_system(
+pub fn transform_system(
     mut root_query: Query<
         (
             Entity,
@@ -106,12 +106,12 @@ impl Plugin for TransformPlugin {
     fn build(&self, app: &mut App) {
         app.add_startup_system_to_stage(
             StartupStage::PostStartup,
-            update_transform_system.label(TransformSystem),
+            transform_system.label(TransformSystem),
         );
 
         app.add_system_to_stage(
             CoreStage::PostUpdate,
-            update_transform_system.label(TransformSystem),
+            transform_system.label(TransformSystem),
         );
     }
 }

@@ -137,7 +137,12 @@ unsafe impl<T: Component> WorldQuery for Added<T> {
     }
 
     #[inline]
-    fn contains<'w>(fetch: &mut Self::Fetch<'w>, entity: Entity) -> bool {
+    fn contains<'w>(_fetch: &mut Self::Fetch<'w>, _entity: Entity) -> bool {
+        true
+    }
+
+    #[inline]
+    unsafe fn fetch<'w>(fetch: &mut Self::Fetch<'w>, entity: Entity) -> Self::Item<'w> {
         let ticks = unsafe { fetch.storage.get_ticks_unchecked(entity) };
         let ticks = unsafe { &*ticks.get() };
 
@@ -145,13 +150,8 @@ unsafe impl<T: Component> WorldQuery for Added<T> {
     }
 
     #[inline]
-    unsafe fn fetch<'w>(fetch: &mut Self::Fetch<'w>, entity: Entity) -> Self::Item<'w> {
-        Self::contains(fetch, entity)
-    }
-
-    #[inline]
     unsafe fn filter_fetch<'w>(fetch: &mut Self::Fetch<'w>, entity: Entity) -> bool {
-        Self::contains(fetch, entity)
+        unsafe { Self::fetch(fetch, entity) }
     }
 
     #[inline]
@@ -215,7 +215,12 @@ unsafe impl<T: Component> WorldQuery for Changed<T> {
     }
 
     #[inline]
-    fn contains<'w>(fetch: &mut Self::Fetch<'w>, entity: Entity) -> bool {
+    fn contains<'w>(_fetch: &mut Self::Fetch<'w>, _entity: Entity) -> bool {
+        true
+    }
+
+    #[inline]
+    unsafe fn fetch<'w>(fetch: &mut Self::Fetch<'w>, entity: Entity) -> Self::Item<'w> {
         let ticks = unsafe { fetch.storage.get_ticks_unchecked(entity) };
         let ticks = unsafe { &*ticks.get() };
 
@@ -223,13 +228,8 @@ unsafe impl<T: Component> WorldQuery for Changed<T> {
     }
 
     #[inline]
-    unsafe fn fetch<'w>(fetch: &mut Self::Fetch<'w>, entity: Entity) -> Self::Item<'w> {
-        Self::contains(fetch, entity)
-    }
-
-    #[inline]
     unsafe fn filter_fetch<'w>(fetch: &mut Self::Fetch<'w>, entity: Entity) -> bool {
-        Self::contains(fetch, entity)
+        unsafe { Self::fetch(fetch, entity) }
     }
 
     #[inline]

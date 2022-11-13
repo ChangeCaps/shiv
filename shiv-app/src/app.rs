@@ -1,6 +1,6 @@
 use std::mem;
 
-use crate::{AppRunner, Plugin, Plugins, RunOnce};
+use crate::{AppRunner, Plugin, Plugins, RunLoop, RunOnce};
 
 use shiv::{
     prelude::{Event, Events},
@@ -58,7 +58,7 @@ impl App {
         Self {
             world: World::new(),
             schedule: Schedule::new(),
-            runner: Box::new(RunOnce),
+            runner: Box::new(RunLoop),
             plugins: Plugins::new(),
         }
     }
