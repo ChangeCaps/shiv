@@ -1,12 +1,12 @@
 use crate::WindowId;
 
 #[derive(Clone, Copy, Debug)]
-pub struct CloseRequested {
+pub struct WindowCloseRequested {
     pub window_id: WindowId,
 }
 
 #[derive(Clone, Copy, Debug)]
-pub struct RedrawRequested {
+pub struct WindowRedrawRequested {
     pub window_id: WindowId,
 }
 

@@ -20,6 +20,17 @@ impl ShouldRun {
     }
 }
 
+impl From<bool> for ShouldRun {
+    #[inline]
+    fn from(value: bool) -> Self {
+        if value {
+            Self::Yes
+        } else {
+            Self::No
+        }
+    }
+}
+
 impl Into<bool> for ShouldRun {
     #[inline]
     fn into(self) -> bool {

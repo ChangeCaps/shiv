@@ -10,14 +10,15 @@ use shiv::{
 };
 
 /// An event that when emitted will tell the [`App`] to exit.
+#[derive(Clone, Copy, Debug, Default)]
 pub struct AppExit;
 
 /// Label for the startup [`Schedule`].
-#[derive(StageLabel)]
+#[derive(Clone, Copy, Debug, Default, StageLabel)]
 pub struct StartupSchedule;
 
 /// [`Stage`]s that are run once at the start of the [`App`].
-#[derive(StageLabel)]
+#[derive(Clone, Copy, Debug, StageLabel)]
 pub enum StartupStage {
     /// Runs before [`StartupStage::Update`].
     PreStartup,
@@ -28,7 +29,7 @@ pub enum StartupStage {
 }
 
 /// Core [`App`] [`Stage`]s.
-#[derive(StageLabel)]
+#[derive(Clone, Copy, Debug, StageLabel)]
 pub enum CoreStage {
     /// Runs before [`CoreStage::Update`].
     PreUpdate,

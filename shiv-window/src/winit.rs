@@ -17,8 +17,8 @@ use winit::{
 };
 
 use crate::{
-    CloseRequested, RawWindowHandle, RedrawRequested, TextInput, Window, WindowCreated, WindowId,
-    WindowResized, Windows,
+    RawWindowHandle, TextInput, Window, WindowCloseRequested, WindowCreated, WindowId,
+    WindowRedrawRequested, WindowResized, Windows,
 };
 
 #[inline]
@@ -312,7 +312,7 @@ impl AppRunner for WinitRunner {
         event_loop.run(move |event, _, control_flow| match event {
             Event::RedrawRequested(id) => {
                 let window_id = window_ids[&id];
-                app.send_event(RedrawRequested { window_id });
+                app.send_event(WindowRedrawRequested { window_id });
             }
             Event::MainEventsCleared => {
                 app.update();
@@ -322,6 +322,7 @@ impl AppRunner for WinitRunner {
                 }
 
                 let windows = app.world.resource::<Windows>();
+
                 for window in windows.values() {
                     window.request_redraw();
                 }
@@ -365,7 +366,7 @@ impl AppRunner for WinitRunner {
             Event::WindowEvent { window_id, event } => match event {
                 WindowEvent::CloseRequested => {
                     let window_id = window_ids[&window_id];
-                    app.send_event(CloseRequested { window_id });
+                    app.send_event(WindowCloseRequested { window_id });
                 }
                 WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
                     let window_id = window_ids[&window_id];
