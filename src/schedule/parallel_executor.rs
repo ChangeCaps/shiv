@@ -43,7 +43,7 @@ impl Default for ParallelExecutor {
 impl ParallelExecutor {
     #[inline]
     pub fn new() -> Self {
-        Self::new_with_task_pool(TaskPool::new().expect("Failed to create task pool"))
+        Self::new_with_task_pool(TaskPool::global().clone())
     }
 
     #[inline]

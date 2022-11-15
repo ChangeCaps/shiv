@@ -117,15 +117,8 @@ impl Schedule {
     pub fn new() -> Self {
         let mut schedule = Self::empty();
 
-        let task_pool = TaskPool::new().expect("Failed to create task pool");
-        schedule.push_stage_internal(
-            DefaultStage::First,
-            SystemStage::parallel_with_task_pool(task_pool.clone()),
-        );
-        schedule.push_stage_internal(
-            DefaultStage::Last,
-            SystemStage::parallel_with_task_pool(task_pool.clone()),
-        );
+        schedule.push_stage_internal(DefaultStage::First, SystemStage::parallel());
+        schedule.push_stage_internal(DefaultStage::Last, SystemStage::parallel());
 
         schedule
     }
