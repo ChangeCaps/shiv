@@ -1,9 +1,10 @@
 use std::{
-    any::TypeId,
+    any::{self, TypeId},
     mem::{self, MaybeUninit},
 };
 
 use crate::{
+    hash_map::HashSet,
     storage::{ComponentStorage, StorageType, Storages},
     world::{Component, ComponentId, Components, Entity},
 };
@@ -39,6 +40,23 @@ pub struct BundleInfo {
 }
 
 impl BundleInfo {
+    #[inline]
+    pub fn new<T: Bundle>(components: &mut Components) -> Self {
+        let component_ids = T::components(components);
+
+        let mut unique = HashSet::default();
+        for id in component_ids.iter() {
+            if !unique.insert(*id) {
+                panic!(
+                    "Bundle {} contains duplicate component",
+                    any::type_name::<T>()
+                );
+            }
+        }
+
+        Self { component_ids }
+    }
+
     /// # Safety
     /// - `components` must be the same as the `Components` used to create this `BundleInfo`.
     /// - `bundle` must be a valid instance of the bundle type `self` was created for.
@@ -115,10 +133,6 @@ impl Bundles {
     #[inline]
     pub fn init_bundle<T: Bundle>(&mut self, components: &mut Components) -> &BundleInfo {
         let id = TypeId::of::<T>();
-
-        self.bundles.entry(id).or_insert_with(|| {
-            let component_ids = T::components(components);
-            BundleInfo { component_ids }
-        })
+        (self.bundles.entry(id)).or_insert_with(|| BundleInfo::new::<T>(components))
     }
 }
