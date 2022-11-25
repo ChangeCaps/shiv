@@ -4,7 +4,6 @@ use crate::{
     hash_map::HashMap,
     world::World,
 };
-use hyena::TaskPool;
 
 use super::{
     IntoRunCriteria, IntoSystemDescriptor, RunCriteria, ShouldRun, Stage, StageLabel, StageLabelId,
