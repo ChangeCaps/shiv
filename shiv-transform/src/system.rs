@@ -1,10 +1,9 @@
 use shiv::{
     hierarchy::{Children, Parent},
     query::{Changed, Query, With, Without},
-    schedule::{IntoSystemDescriptor, SystemLabel},
+    schedule::SystemLabel,
     world::Entity,
 };
-use shiv_app::{App, CoreStage, Plugin, StartupStage};
 
 use crate::{GlobalTransform, Transform};
 
@@ -98,20 +97,3 @@ fn propagate_recursive(
 
 #[derive(SystemLabel)]
 pub struct TransformSystem;
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct TransformPlugin;
-
-impl Plugin for TransformPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_startup_system_to_stage(
-            StartupStage::PostStartup,
-            transform_system.label(TransformSystem),
-        );
-
-        app.add_system_to_stage(
-            CoreStage::PostUpdate,
-            transform_system.label(TransformSystem),
-        );
-    }
-}

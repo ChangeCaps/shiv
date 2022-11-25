@@ -10,10 +10,8 @@ license = "MIT OR Apache-2.0"
 
 [dependencies]
 shiv = { path = "..", version = "0.1.0-alpha3", features = ["hierarchy"] }
-shiv-app = { path = "../shiv-app", version = "0.1.0-alpha3", optional = true }
 
 glam = "0.22"
 
 [features]
-default = ["plugin"]
-plugin = ["shiv-app"]
+default = []

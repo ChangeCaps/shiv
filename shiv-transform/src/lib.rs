@@ -1,7 +1,5 @@
 mod component;
-#[cfg(feature = "plugin")]
-mod plugin;
+mod system;
 
 pub use component::*;
-#[cfg(feature = "plugin")]
-pub use plugin::*;
+pub use system::*;

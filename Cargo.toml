@@ -10,7 +10,7 @@ readme = "README.md"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [workspace]
-members = ["shiv-macro", "shiv-macro-impl"]
+members = ["shiv-macro", "shiv-macro-impl", "shiv-transform"]
 
 [dependencies]
 shiv-macro = { path = "shiv-macro", version = "0.1.0-alpha3" }
