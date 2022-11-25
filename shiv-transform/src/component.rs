@@ -68,6 +68,30 @@ impl Transform {
         }
     }
 
+    #[inline]
+    pub const fn with_xyz(mut self, x: f32, y: f32, z: f32) -> Self {
+        self.translation = Vec3::new(x, y, z);
+        self
+    }
+
+    #[inline]
+    pub const fn with_translation(mut self, translation: Vec3) -> Self {
+        self.translation = translation;
+        self
+    }
+
+    #[inline]
+    pub const fn with_rotation(mut self, rotation: Quat) -> Self {
+        self.rotation = rotation;
+        self
+    }
+
+    #[inline]
+    pub const fn with_scale(mut self, scale: Vec3) -> Self {
+        self.scale = scale;
+        self
+    }
+
     /// Computes the matrix representation of this transform.
     #[inline]
     pub fn compute_matrix(&self) -> Mat4 {
@@ -154,6 +178,14 @@ impl GlobalTransform {
     pub const fn from_xyz(x: f32, y: f32, z: f32) -> Self {
         Self {
             translation: Vec3::new(x, y, z),
+            ..Self::IDENTITY
+        }
+    }
+
+    #[inline]
+    pub const fn from_translation(translation: Vec3) -> Self {
+        Self {
+            translation,
             ..Self::IDENTITY
         }
     }
