@@ -1,6 +1,6 @@
 [package]
 name = "shiv"
-version = "0.1.0-alpha3"
+version = "0.1.0-alpha.3"
 edition = "2021"
 description = "A simple modern Entity Component System"
 repository = "https://github.com/ChangeCaps/shiv"
@@ -13,7 +13,7 @@ readme = "README.md"
 members = ["shiv-macro", "shiv-macro-impl", "shiv-transform"]
 
 [dependencies]
-shiv-macro = { path = "shiv-macro", version = "0.1.0-alpha3" }
+shiv-macro = { path = "shiv-macro", version = "0.1.0-alpha.3" }
 
 ahash = "0.8"
 async-channel = "1.7"

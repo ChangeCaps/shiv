@@ -1,6 +1,6 @@
 [package]
 name = "shiv-transform"
-version = "0.1.0-alpha3"
+version = "0.1.0-alpha.3"
 edition = "2021"
 description = "A simple transform system for shiv"
 repository = "https://github.com/ChangeCaps/shiv"
@@ -9,7 +9,7 @@ license = "MIT OR Apache-2.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-shiv = { path = "..", version = "0.1.0-alpha3", features = ["hierarchy"] }
+shiv = { path = "..", version = "0.1.0-alpha.3", features = ["hierarchy"] }
 
 glam = "0.22"
 

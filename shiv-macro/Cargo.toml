@@ -1,6 +1,6 @@
 [package]
 name = "shiv-macro"
-version = "0.1.0-alpha3"
+version = "0.1.0-alpha.3"
 edition = "2021"
 description = "Macros for shiv"
 repository = "https://github.com/ChangeCaps/shiv"
@@ -12,7 +12,7 @@ license = "MIT OR Apache-2.0"
 proc-macro = true
 
 [dependencies]
-shiv-macro-impl = { path = "../shiv-macro-impl", version = "0.1.0-alpha3" }
+shiv-macro-impl = { path = "../shiv-macro-impl", version = "0.1.0-alpha.3" }
 
 proc-macro-crate = "1.2"
 syn = "1.0"
