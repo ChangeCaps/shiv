@@ -102,6 +102,10 @@ impl<Q: WorldQuery, F: ReadOnlyWorldQuery> QueryState<Q, F> {
             return None;
         }
 
+        if !world.contains_entity(entity) {
+            return None;
+        }
+
         let mut fetch =
             unsafe { Q::init_fetch(world, &self.query_state, last_change_tick, change_tick) };
         let mut filter =
