@@ -167,7 +167,8 @@ macro_rules! impl_or_world_query {
                 ($($ident,)*): &mut Self::Fetch<'w>,
                 entity: Entity,
             ) -> Self::Item<'w> {
-                unsafe { $($ident::filter_fetch(&mut $ident.fetch, entity) ||)* false }
+                unsafe { $($ident::contains(&mut $ident.fetch, entity) &&
+                    $ident::filter_fetch(&mut $ident.fetch, entity) ||)* false }
             }
 
             #[inline]
@@ -258,8 +259,8 @@ unsafe impl<T: Component> WorldQuery for Added<T> {
     }
 
     #[inline]
-    fn contains<'w>(_fetch: &mut Self::Fetch<'w>, _entity: Entity) -> bool {
-        true
+    fn contains<'w>(fetch: &mut Self::Fetch<'w>, entity: Entity) -> bool {
+        fetch.storage.contains(entity)
     }
 
     #[inline]
@@ -336,8 +337,8 @@ unsafe impl<T: Component> WorldQuery for Changed<T> {
     }
 
     #[inline]
-    fn contains<'w>(_fetch: &mut Self::Fetch<'w>, _entity: Entity) -> bool {
-        true
+    fn contains<'w>(fetch: &mut Self::Fetch<'w>, entity: Entity) -> bool {
+        fetch.storage.contains(entity)
     }
 
     #[inline]

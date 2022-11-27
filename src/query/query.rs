@@ -36,13 +36,11 @@ impl<Q: WorldQuery, F: ReadOnlyWorldQuery> QueryState<Q, F> {
         self.debug_validate_world(world);
 
         let mut iter = self.filtered_access.iter_with();
-
         let mut entities = if let Some(id) = iter.next() {
             world.storage.entity_ids(id)
         } else {
             world.entities.entity_ids().clone()
         };
-
         for id in iter {
             entities.intersect_with(&world.storage.entity_ids(id));
         }
