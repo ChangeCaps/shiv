@@ -219,10 +219,11 @@ impl World {
         if self.contains_entity(entity) {
             EntityMut::new(self, entity)
         } else {
-            if self.entities.alloc_at(entity) {
+            if let Some(entity) = self.entities.get(entity.index() as usize) {
                 self.despawn(entity);
             }
 
+            self.entities.alloc_at(entity);
             EntityMut::new(self, entity)
         }
     }
