@@ -45,6 +45,7 @@ mod tests {
     use std::collections::HashMap;
 
     use crate as shiv;
+    use crate::query::Or;
     use crate::{
         query::{Added, Changed, Query, With},
         schedule::{IntoSystemDescriptor, Schedule, ShouldRun, StageLabel, SystemStage},
@@ -196,5 +197,25 @@ mod tests {
 
         schedule.run_once(&mut world_a);
         schedule.run_once(&mut world_b);
+    }
+
+    #[test]
+    fn or_filter() {
+        let mut world = World::new();
+
+        world.spawn().insert(2i32).entity();
+        world.spawn().insert(3i32).insert(false).entity();
+        world.spawn().insert(4i32).insert(0.4f32).entity();
+
+        let mut schedule = default_schedule();
+
+        fn system(query: Query<(&i32, Changed<bool>), Or<(Changed<bool>, Changed<f32>)>>) {
+            for _ in query.iter() {}
+        }
+
+        schedule.add_system_to_stage(TestStage::A, system);
+
+        schedule.run_once(&mut world);
+        schedule.run_once(&mut world);
     }
 }

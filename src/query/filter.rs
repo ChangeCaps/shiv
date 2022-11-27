@@ -265,6 +265,10 @@ unsafe impl<T: Component> WorldQuery for Added<T> {
 
     #[inline]
     unsafe fn fetch<'w>(fetch: &mut Self::Fetch<'w>, entity: Entity) -> Self::Item<'w> {
+        if !Self::contains(fetch, entity) {
+            return false;
+        }
+
         let ticks = unsafe { fetch.storage.get_ticks_unchecked(entity) };
         let ticks = unsafe { &*ticks.get() };
 
@@ -343,6 +347,10 @@ unsafe impl<T: Component> WorldQuery for Changed<T> {
 
     #[inline]
     unsafe fn fetch<'w>(fetch: &mut Self::Fetch<'w>, entity: Entity) -> Self::Item<'w> {
+        if !Self::contains(fetch, entity) {
+            return false;
+        }
+
         let ticks = unsafe { fetch.storage.get_ticks_unchecked(entity) };
         let ticks = unsafe { &*ticks.get() };
 
