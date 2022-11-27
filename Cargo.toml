@@ -1,6 +1,6 @@
 [package]
 name = "shiv"
-version = "0.1.0-alpha.9"
+version = "0.1.0-alpha.10"
 edition = "2021"
 description = "A simple modern Entity Component System"
 repository = "https://github.com/ChangeCaps/shiv"
