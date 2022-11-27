@@ -13,19 +13,28 @@ pub struct With<T> {
     _marker: PhantomData<T>,
 }
 
+pub struct WithFetch<'w, T: Component> {
+    storage: &'w T::Storage,
+}
+
 unsafe impl<T: Component> WorldQuery for With<T> {
     type Item<'w> = ();
-    type Fetch<'w> = ();
+    type Fetch<'w> = WithFetch<'w, T>;
     type State = ComponentId;
     type ReadOnly = Self;
 
     #[inline]
     unsafe fn init_fetch<'w>(
-        _world: &'w World,
-        _state: &Self::State,
+        world: &'w World,
+        &state: &Self::State,
         _last_change_tick: u32,
         _change_tick: u32,
     ) -> Self::Fetch<'w> {
+        let storage_sets = <T::Storage as Storage>::get(&world.storage);
+
+        WithFetch {
+            storage: storage_sets.get(state).unwrap(),
+        }
     }
 
     #[inline]
@@ -35,6 +44,11 @@ unsafe impl<T: Component> WorldQuery for With<T> {
 
     #[inline]
     unsafe fn fetch<'w>(_fetch: &mut Self::Fetch<'w>, _entity: Entity) -> Self::Item<'w> {}
+
+    #[inline]
+    unsafe fn filter_fetch<'w>(fetch: &mut Self::Fetch<'w>, entity: Entity) -> bool {
+        fetch.storage.contains(entity)
+    }
 
     #[inline]
     fn init_state(world: &mut World) -> Self::State {
@@ -59,19 +73,28 @@ pub struct Without<T> {
     _marker: PhantomData<T>,
 }
 
+pub struct WithoutFetch<'w, T: Component> {
+    storage: &'w T::Storage,
+}
+
 unsafe impl<T: Component> WorldQuery for Without<T> {
     type Item<'w> = ();
-    type Fetch<'w> = ();
+    type Fetch<'w> = WithoutFetch<'w, T>;
     type State = ComponentId;
     type ReadOnly = Self;
 
     #[inline]
     unsafe fn init_fetch<'w>(
-        _world: &'w World,
-        _state: &Self::State,
+        world: &'w World,
+        &state: &Self::State,
         _last_change_tick: u32,
         _change_tick: u32,
     ) -> Self::Fetch<'w> {
+        let storage_sets = <T::Storage as Storage>::get(&world.storage);
+
+        WithoutFetch {
+            storage: storage_sets.get(state).unwrap(),
+        }
     }
 
     #[inline]
@@ -81,6 +104,11 @@ unsafe impl<T: Component> WorldQuery for Without<T> {
 
     #[inline]
     unsafe fn fetch<'w>(_fetch: &mut Self::Fetch<'w>, _entity: Entity) -> Self::Item<'w> {}
+
+    #[inline]
+    unsafe fn filter_fetch<'w>(fetch: &mut Self::Fetch<'w>, entity: Entity) -> bool {
+        !fetch.storage.contains(entity)
+    }
 
     #[inline]
     fn init_state(world: &mut World) -> Self::State {
@@ -99,6 +127,99 @@ unsafe impl<T: Component> WorldQuery for Without<T> {
 }
 
 unsafe impl<T: Component> ReadOnlyWorldQuery for Without<T> {}
+
+pub struct Or<T>(T);
+
+#[doc(hidden)]
+#[derive(Debug)]
+pub struct OrFetch<'w, T: WorldQuery> {
+    fetch: T::Fetch<'w>,
+}
+
+macro_rules! impl_or_world_query {
+    (@ $($ident:ident),*) => {
+        #[allow(non_snake_case, unused)]
+        unsafe impl<$($ident: WorldQuery),*> WorldQuery for Or<($($ident,)*)> {
+            type Item<'w> = bool;
+            type Fetch<'w> = ($(OrFetch<'w, $ident>,)*);
+            type State = ($($ident::State,)*);
+            type ReadOnly = Or<($($ident::ReadOnly,)*)>;
+
+            #[inline]
+            unsafe fn init_fetch<'w>(
+                world: &'w World,
+                ($($ident,)*): &Self::State,
+                last_change_tick: u32,
+                change_tick: u32,
+            ) -> Self::Fetch<'w> {
+                unsafe { ($(OrFetch {
+                    fetch: $ident::init_fetch(world, $ident, last_change_tick, change_tick),
+                },)*) }
+            }
+
+            #[inline]
+            fn contains<'w>(($($ident,)*): &mut Self::Fetch<'w>, entity: Entity) -> bool {
+                $($ident::contains(&mut $ident.fetch, entity) &&)* true
+            }
+
+            #[inline]
+            unsafe fn fetch<'w>(
+                ($($ident,)*): &mut Self::Fetch<'w>,
+                entity: Entity,
+            ) -> Self::Item<'w> {
+                unsafe { $($ident::filter_fetch(&mut $ident.fetch, entity) ||)* false }
+            }
+
+            #[inline]
+            unsafe fn filter_fetch<'w>(
+                fetch: &mut Self::Fetch<'w>,
+                entity: Entity,
+            ) -> bool {
+                unsafe { Self::fetch(fetch, entity) }
+            }
+
+            #[inline]
+            fn init_state(world: &mut World) -> Self::State {
+                ($($ident::init_state(world),)*)
+            }
+
+            #[inline]
+            fn update_component_access(($($ident,)*): &Self::State, access: &mut FilteredAccess<ComponentId>) {
+                let mut _access = access.clone();
+                let mut _is_first = true;
+                $(
+                    if _is_first {
+                        _is_first = false;
+
+                        $ident::update_component_access($ident, &mut _access);
+                    } else {
+                        let mut intermediate = FilteredAccess::default();
+                        $ident::update_component_access($ident, &mut intermediate);
+                        _access.extend_intersect(&intermediate);
+                    }
+                )*
+
+                *access = _access;
+            }
+
+            #[inline]
+            fn matches_component_set(($($ident,)*): &Self::State, id: ComponentId) -> bool {
+                $($ident::matches_component_set($ident, id) ||)* false
+            }
+        }
+
+        unsafe impl<$($ident: ReadOnlyWorldQuery),*> ReadOnlyWorldQuery for Or<($($ident,)*)> {}
+    };
+    ($start:ident $(,$ident:ident)*) => {
+        impl_or_world_query!(@ $start $(,$ident)*);
+        impl_or_world_query!($($ident),*);
+    };
+    () => {
+        impl_or_world_query!(@);
+    }
+}
+
+impl_or_world_query!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z);
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Added<T> {

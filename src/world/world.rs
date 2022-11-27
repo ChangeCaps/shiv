@@ -379,6 +379,7 @@ mod tests {
     use shiv_macro::Bundle;
 
     use crate as shiv;
+    use crate::query::Or;
     use crate::{
         query::{With, Without},
         storage::DenseStorage,
@@ -386,6 +387,10 @@ mod tests {
     };
 
     impl Component for i32 {
+        type Storage = DenseStorage;
+    }
+
+    impl Component for f32 {
         type Storage = DenseStorage;
     }
 
@@ -535,7 +540,7 @@ mod tests {
 
         let entity1 = world.spawn().insert(2i32).entity();
         let entity2 = world.spawn().insert(3i32).insert(false).entity();
-        let entity3 = world.spawn().insert(4i32).entity();
+        let entity3 = world.spawn().insert(4i32).insert(0.4f32).entity();
 
         let query = world.query_filtered::<(Entity, &i32), Without<bool>>();
 
@@ -550,6 +555,14 @@ mod tests {
         let mut iter = query.iter(&world);
 
         assert_eq!(iter.next().unwrap(), (entity2, &3));
+        assert!(iter.next().is_none());
+
+        let query = world.query_filtered::<&i32, Or<(With<f32>, With<bool>)>>();
+
+        let mut iter = query.iter(&world);
+
+        assert_eq!(iter.next().unwrap(), &3);
+        assert_eq!(iter.next().unwrap(), &4);
         assert!(iter.next().is_none());
     }
 

@@ -248,6 +248,13 @@ where
     }
 
     #[inline]
+    pub fn extend_intersect(&mut self, other: &Self) {
+        self.access.extend(&other.access);
+        self.with.intersect_with(&other.with);
+        self.without.intersect_with(&other.without);
+    }
+
+    #[inline]
     pub fn get_conflicts(&self, other: &Self) -> Vec<T> {
         if !self.is_compatible(other) {
             self.access.get_conflicts(&other.access)
