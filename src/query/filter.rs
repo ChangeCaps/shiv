@@ -186,7 +186,7 @@ macro_rules! impl_or_world_query {
 
             #[inline]
             fn update_component_access(($($ident,)*): &Self::State, access: &mut FilteredAccess<ComponentId>) {
-                let mut _access = access.clone();
+                let mut _access = FilteredAccess::default();
                 let mut _is_first = true;
                 $(
                     if _is_first {
@@ -200,7 +200,7 @@ macro_rules! impl_or_world_query {
                     }
                 )*
 
-                *access = _access;
+                access.extend(&_access);
             }
 
             #[inline]

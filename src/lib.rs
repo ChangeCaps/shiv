@@ -205,7 +205,7 @@ mod tests {
 
         world.spawn().insert(2i32).entity();
         world.spawn().insert(3i32).insert(false).entity();
-        world.spawn().insert(4i32).insert(0.4f32).entity();
+        world.spawn().insert(0.4f32).entity();
 
         let mut schedule = default_schedule();
 
